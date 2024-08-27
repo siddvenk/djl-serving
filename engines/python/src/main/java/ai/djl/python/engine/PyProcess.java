@@ -96,6 +96,8 @@ class PyProcess {
         trtLlmMode = "trtllm".equals(model.getProperty("rolling_batch"));
     }
 
+    // when predict is called from the warmup path, it's not done in the context of a worker
+    // thread so we can't clean it up!
     Output predict(Input inputs, int timeout, boolean initialLoad) {
         try {
             if (inputs.getProperty("handler", null) == null) {

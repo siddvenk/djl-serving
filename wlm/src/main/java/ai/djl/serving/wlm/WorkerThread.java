@@ -75,6 +75,7 @@ public final class WorkerThread<I, O> implements Runnable {
     /** {@inheritDoc} */
     @Override
     public void run() {
+        logger.info("Worker thread {} about to run", workerId);
         Thread thread = Thread.currentThread();
         thread.setName(workerId);
         currentThread.set(thread);

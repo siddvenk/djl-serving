@@ -1244,7 +1244,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         public void run(List<Job<I, O>> jobs) throws TranslateException {
             List<Job<I, O>> validJobs = new ArrayList<>(jobs.size());
             for (Job<I, O> job : jobs) {
-                logger.info("Running job {}", job);
+                logger.info("Running job {} on Modelthread", job);
                 if (job.getInput() instanceof Input) {
                     Input i = (Input) job.getInput();
                     if (i.isCancelled()) {

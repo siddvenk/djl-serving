@@ -147,6 +147,7 @@ public class WorkLoadManager {
      * @return number of running workers.
      */
     public int getNumRunningWorkers(WorkerPoolConfig<?, ?> wpc) {
+        logger.info("getting number of running workers");
         int numWorking = 0;
         WorkerPool<?, ?> pool = workerPools.get(wpc);
         if (pool != null) {
@@ -160,6 +161,7 @@ public class WorkLoadManager {
                 }
             }
         }
+        logger.info("number of running workers is {}", numWorking);
         return numWorking;
     }
 
