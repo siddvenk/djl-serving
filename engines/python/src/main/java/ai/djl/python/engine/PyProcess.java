@@ -53,7 +53,7 @@ class PyProcess {
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
     private boolean trtLlmMode;
-
+    private boolean sleepMode;
     private static AtomicInteger counter = new AtomicInteger(0);
 
     PyProcess(Model model, PyEnv pyEnv, int workerId) {
@@ -107,6 +107,11 @@ class PyProcess {
 
             List<CompletableFuture<Output>> futures = new ArrayList<>(connections.size());
             if (initialLoad || !trtLlmMode) {
+                if (restartCount.get() > 0 && !sleepMode) {
+                    sleepMode = true;
+                    logger.info("setting sleep mode");
+                    System.setProperty("sleep", "true");
+                }
                 for (Connection conn : connections) {
                     futures.add(conn.send(inputs));
                 }

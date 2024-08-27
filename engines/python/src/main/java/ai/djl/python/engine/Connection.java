@@ -115,8 +115,20 @@ class Connection {
         logger.info("sending inputs from java to python");
         CompletableFuture<Output> f = new CompletableFuture<>();
         requestHandler.setResponseFuture(f);
+        if (Boolean.getBoolean("sleep")) {
+            System.clearProperty("sleep");
+            try {
+                Thread.sleep(30000);
+                logger.info("slept for 30 sec");
+            } catch (Exception ignored) {
+
+            }
+        }
         if (!channel.isActive() || !channel.writeAndFlush(input).sync().isSuccess()) {
             throw new IllegalStateException("Failed to send data to python.");
+        }
+        if (!f.equals(requestHandler.future)) {
+            logger.info("race condition hit");
         }
         return f;
     }
