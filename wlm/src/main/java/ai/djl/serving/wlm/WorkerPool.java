@@ -57,6 +57,7 @@ public class WorkerPool<I, O> {
         this.threadPool = threadPool;
         workerGroups = new ConcurrentHashMap<>();
         refCnt = new AtomicInteger(1);
+        logger.info("creating new worker pool");
     }
 
     /** Increases the reference count. */
@@ -101,6 +102,9 @@ public class WorkerPool<I, O> {
      * @return the workers
      */
     public List<WorkerThread<I, O>> getWorkers() {
+        workerGroups.values().stream()
+                .flatMap(g -> g.workers.stream())
+                .forEach(g -> logger.info("worker is {}", g.getWorkerId()));
         return workerGroups.values().stream()
                 .flatMap(g -> g.workers.stream())
                 .collect(Collectors.toList());
@@ -112,6 +116,7 @@ public class WorkerPool<I, O> {
      * @return the jobQueue
      */
     public LinkedBlockingDeque<WorkerJob<I, O>> getJobQueue() {
+        logger.info("getting job queue");
         return jobQueue;
     }
 
@@ -329,19 +334,17 @@ public class WorkerPool<I, O> {
      * <p>Logs all thread-ids in the pool.
      */
     private void log() {
-        if (logger.isDebugEnabled()) {
-            StringBuffer buf = new StringBuffer();
-            getWorkers()
-                    .forEach(
-                            w -> {
-                                buf.append(w.getWorkerId());
-                                if (w.isFixPoolThread()) {
-                                    buf.append("-fixedPool\n");
-                                } else {
-                                    buf.append("-tmpPool\n");
-                                }
-                            });
-            logger.debug("worker pool for model {}:\n {}", wpc, buf);
-        }
+        StringBuffer buf = new StringBuffer();
+        getWorkers()
+                .forEach(
+                        w -> {
+                            buf.append(w.getWorkerId());
+                            if (w.isFixPoolThread()) {
+                                buf.append("-fixedPool\n");
+                            } else {
+                                buf.append("-tmpPool\n");
+                            }
+                        });
+        logger.debug("worker pool for model {}:\n {}", wpc, buf);
     }
 }

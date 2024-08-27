@@ -315,6 +315,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             }
 
             models.put(device, m);
+            logger.info("ModelInfo load done");
             status = Status.READY;
         } finally {
             if (status == null) {
@@ -351,6 +352,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     /** {@inheritDoc} */
     @Override
     public ThreadConfig<I, O> newThread(Device device) {
+        logger.info("Creating new model thread");
         return new ModelThread(device);
     }
 
@@ -375,6 +377,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     /** {@inheritDoc} */
     @Override
     public Status getStatus() {
+        logger.info("fetching status for Models");
         if (status == null) {
             return Status.PENDING;
         } else if (status == Status.FAILED) {
@@ -382,6 +385,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         }
 
         for (Model m : getModels().values()) {
+            logger.info("evaluating status for model {}", m.getName());
             int failures = m.intProperty("failed", 0);
             if (failures > 0) {
                 int def = Integer.parseInt(Utils.getenv("SERVING_RETRY_THRESHOLD", "0"));
@@ -1213,6 +1217,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             super(device);
             model = getModel(device);
             predictor = model.newPredictor();
+            logger.info("Creating new model thread on device {}", device);
 
             boolean logModelMetric = Boolean.parseBoolean(model.getProperty("log_request_metric"));
             if (logModelMetric) {
@@ -1239,6 +1244,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         public void run(List<Job<I, O>> jobs) throws TranslateException {
             List<Job<I, O>> validJobs = new ArrayList<>(jobs.size());
             for (Job<I, O> job : jobs) {
+                logger.info("Running job {}", job);
                 if (job.getInput() instanceof Input) {
                     Input i = (Input) job.getInput();
                     if (i.isCancelled()) {

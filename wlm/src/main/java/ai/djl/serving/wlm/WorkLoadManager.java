@@ -94,6 +94,7 @@ public class WorkLoadManager {
      * @return {@code true} if submit success, false otherwise.
      */
     public <I, O> CompletableFuture<O> runJob(Job<I, O> job) {
+        logger.info("Starting job: {}", job);
         CompletableFuture<O> result = new CompletableFuture<>();
         WorkerPoolConfig<I, O> wpc = job.getWpc();
         if (wpc.getStatus() != WorkerPoolConfig.Status.READY) {

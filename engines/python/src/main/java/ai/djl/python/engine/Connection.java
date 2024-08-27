@@ -112,6 +112,7 @@ class Connection {
     }
 
     CompletableFuture<Output> send(Input input) throws InterruptedException {
+        logger.info("sending inputs from java to python");
         CompletableFuture<Output> f = new CompletableFuture<>();
         requestHandler.setResponseFuture(f);
         if (!channel.isActive() || !channel.writeAndFlush(input).sync().isSuccess()) {

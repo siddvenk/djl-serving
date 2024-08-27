@@ -26,6 +26,9 @@ import ai.djl.translate.TranslatorContext;
 import ai.djl.util.Pair;
 import ai.djl.util.PairList;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,6 +37,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class PyPredictor<I, O> extends Predictor<I, O> {
+
+    static final Logger logger = LoggerFactory.getLogger(PyPredictor.class);
 
     private static final Pattern BATCH_PATTERN = Pattern.compile("batch_(\\d+)\\.(.*)");
 
@@ -67,6 +72,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
             // TODO: wait for restart
             throw new TranslateException("Backend Python process is stopped.");
         }
+        logger.info("batch predict is invoked");
         Object first = inputs.get(0);
         if (first instanceof Input) {
             int size = inputs.size();
@@ -74,6 +80,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
                 Output output;
                 Input input = (Input) first;
                 if (isRollingBatch && !input.getProperties().containsKey("handler")) {
+                    logger.info("adding request to rolling batch queue");
                     output = rollingBatch.addInput(input, timeout);
                 } else {
                     output = process.predict(input, timeout, false);

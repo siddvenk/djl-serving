@@ -261,11 +261,13 @@ public class PyModel extends BaseModel {
     /** {@inheritDoc} */
     @Override
     public <I, O> Predictor<I, O> newPredictor(Translator<I, O> translator, Device device) {
+        logger.info("Creating new python predictor");
         int timeout = pyEnv.getPredictTimeout();
         if (pyEnv.isMpiMode()) {
             if (workerQueue.isEmpty()) {
                 throw new EngineException("There are no devices left to create new workers");
             }
+            logger.info("Creating mpi predictor");
             return new PyPredictor<>(this, workerQueue.poll(), timeout, translator, device);
         }
         PyProcess worker = new PyProcess(this, pyEnv, -1);

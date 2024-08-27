@@ -81,6 +81,7 @@ public class Workflow implements AutoCloseable {
                         OUT, new WorkflowExpression(new Item(modelName), new Item(IN)));
         funcs = new ConcurrentHashMap<>();
         configs = Collections.emptyMap();
+        logger.info("created new workflow from worker pool config");
     }
 
     /**
@@ -162,7 +163,7 @@ public class Workflow implements AutoCloseable {
      * @return a future of the result of the execution
      */
     public CompletableFuture<Output> execute(WorkLoadManager wlm, Input input) {
-        logger.trace("Beginning execution of workflow: {}", name);
+        logger.info("Beginning execution of workflow: {}", name);
         WorkflowExecutor ex = new WorkflowExecutor(wlm, input);
         return ex.execute(OUT)
                 .thenApply(
@@ -297,7 +298,7 @@ public class Workflow implements AutoCloseable {
                         }
 
                         targetStack.remove(target);
-                        logger.trace("Workflow computed target {} with value:\n{}", target, o);
+                        logger.info("Workflow computed target {} with value:\n{}", target, o);
                     });
         }
 

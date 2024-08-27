@@ -116,6 +116,7 @@ class PyProcess {
 
             Output output = null;
             if (trtLlmMode) {
+                logger.info("calling trtllm predict mode");
                 output = futures.get(0).get(timeout, TimeUnit.SECONDS);
             } else {
                 for (CompletableFuture<Output> future : futures) {
@@ -190,6 +191,7 @@ class PyProcess {
             // initialize model with an empty request
             Input init = new Input();
             init.setProperties(pyEnv.getInitParameters());
+            logger.info("sending warmup request to load model");
             predict(init, pyEnv.getModelLoadingTimeout(), true);
         } catch (EngineException e) {
             started = false;
@@ -298,6 +300,7 @@ class PyProcess {
                         break;
                     }
                     if (result.contains("Python engine started.")) {
+                        logger.info("Marking Python engine as started");
                         logger.info("{}: {}", getName(), result);
                         lifeCycle.setStarted(true, processId);
                         continue;
