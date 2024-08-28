@@ -50,7 +50,8 @@ class PyProcess {
     private List<Connection> connections;
     private CountDownLatch latch;
     private volatile boolean started; // NOPMD
-    private volatile boolean modelLoaded;
+    private volatile boolean modelLoaded; // NOPMD
+    private volatile boolean modelUnrecoverable; // NOPMD
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
     private boolean trtLlmMode;
@@ -113,7 +114,7 @@ class PyProcess {
                 if (restartCount.get() > 0 && !sleepMode) {
                     sleepMode = true;
                     logger.info("setting sleep mode");
-                    System.setProperty("sleep", "true");
+                    // System.setProperty("sleep", "true");
                 }
                 for (Connection conn : connections) {
                     futures.add(conn.send(inputs));
@@ -154,6 +155,9 @@ class PyProcess {
             if (!initialLoad) {
                 logger.info("Restart python process ...");
                 restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
+            } else {
+                logger.info("Model warmup failed, marking as unrecoverable");
+                modelUnrecoverable = true;
             }
             if (e instanceof EngineException) {
                 throw (EngineException) e;
@@ -164,6 +168,7 @@ class PyProcess {
 
     synchronized void startPythonProcess() {
         try {
+            modelLoaded = false;
             int id = restartCount.get();
             int port = connections.get(0).getPort();
             logger.info("Start process: {} - retry: {}", port, id);
@@ -222,8 +227,6 @@ class PyProcess {
     }
 
     synchronized void stopPythonProcess(boolean error) {
-        logger.info("Stop process requested, unsetting modelLoaded");
-        modelLoaded = false;
         restartCount.getAndIncrement();
         logger.info("Stop process: {}:{}, failure={}", workerId, pid, error);
         if (error) {
@@ -269,12 +272,12 @@ class PyProcess {
         }
     }
 
-    boolean isStopped() {
-        return !started;
+    boolean isReady() {
+        return started && modelLoaded;
     }
 
-    boolean isModelLoaded() {
-        return modelLoaded;
+    boolean isModelUnrecoverable() {
+        return modelUnrecoverable;
     }
 
     private static String[] getHosts(int clusterSize) {

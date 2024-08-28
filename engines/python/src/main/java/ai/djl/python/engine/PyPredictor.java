@@ -14,6 +14,7 @@ package ai.djl.python.engine;
 
 import ai.djl.Device;
 import ai.djl.Model;
+import ai.djl.engine.EngineException;
 import ai.djl.inference.Predictor;
 import ai.djl.modality.Input;
 import ai.djl.modality.Output;
@@ -68,10 +69,12 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     @Override
     @SuppressWarnings("unchecked")
     public List<O> batchPredict(List<I> inputs) throws TranslateException {
-        if (process.isStopped() || !process.isModelLoaded()) {
-            logger.info("Stopped: {}, ModelLoaded: {}", process.isStopped(), process.isModelLoaded());
+        if (!process.isReady()) {
             // TODO: wait for restart
             throw new TranslateException("Backend Python process is restarting.");
+        }
+        if (process.isModelUnrecoverable()) {
+            throw new EngineException("Backend Python process is unrecoverable.");
         }
         logger.info("batch predict is invoked");
         Object first = inputs.get(0);
