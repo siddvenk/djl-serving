@@ -50,6 +50,7 @@ class PyProcess {
     private List<Connection> connections;
     private CountDownLatch latch;
     private volatile boolean started; // NOPMD
+    private volatile boolean modelLoaded;
     private AtomicInteger restartCount;
     private CompletableFuture<Void> restartFuture;
     private boolean trtLlmMode;
@@ -146,7 +147,6 @@ class PyProcess {
                     logger.info("Model [{}] initialized.", model.getName());
                 }
             }
-
             return output;
         } catch (Throwable e) { // use Throwable to workaround spotbug false alarm
             logger.debug("predict[init={}] exception: {}", initialLoad, e.getClass().getName());
@@ -200,6 +200,8 @@ class PyProcess {
             init.setProperties(pyEnv.getInitParameters());
             logger.info("sending warmup request to load model");
             predict(init, pyEnv.getModelLoadingTimeout(), true);
+            logger.info("Model successfully started up and loaded. Setting model loaded");
+            modelLoaded = true;
         } catch (EngineException e) {
             started = false;
             throw e;
@@ -220,6 +222,8 @@ class PyProcess {
     }
 
     synchronized void stopPythonProcess(boolean error) {
+        logger.info("Stop process requested, unsetting modelLoaded");
+        modelLoaded = false;
         restartCount.getAndIncrement();
         logger.info("Stop process: {}:{}, failure={}", workerId, pid, error);
         if (error) {
@@ -267,6 +271,10 @@ class PyProcess {
 
     boolean isStopped() {
         return !started;
+    }
+
+    boolean isModelLoaded() {
+        return modelLoaded;
     }
 
     private static String[] getHosts(int clusterSize) {
