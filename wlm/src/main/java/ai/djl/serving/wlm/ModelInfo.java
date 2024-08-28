@@ -401,7 +401,16 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
                         // SIGKILL (9 + 128)
                         System.exit(137); // NOPMD
                     }
-
+                    boolean isHealthCheckOverride =
+                            Boolean.parseBoolean(
+                                    Utils.getEnvOrSystemProperty(
+                                            "SERVING_HEALTH_CHECK_OVERRIDE_SUCCESS", "false"));
+                    if (isHealthCheckOverride) {
+                        logger.error(
+                                "HEALTH_CHECK_OVERRIDE_SUCCESS is enabled. Model is at reduced"
+                                        + " capacity but will continue serving requests");
+                        return Status.READY;
+                    }
                     return Status.FAILED;
                 }
             }
