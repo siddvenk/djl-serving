@@ -22,14 +22,14 @@ ARG pydantic_version=2.8.2
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.30.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.43.2
+ARG transformers_version=4.45.1
 ARG accelerate_version=0.32.1
 ARG bitsandbytes_version=0.43.1
 ARG optimum_version=1.21.2
 ARG auto_gptq_version=0.7.1
 ARG datasets_version=2.20.0
 ARG autoawq_version=0.2.5
-ARG tokenizers_version=0.19.1
+ARG tokenizers_version=0.20.0
 # LMI-Dist Deps
 ARG vllm_version=0.6.1.post2
 ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.6.1/vllm_flash_attn-2.6.1-cp310-cp310-manylinux1_x86_64.whl"
