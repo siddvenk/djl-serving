@@ -14,6 +14,7 @@ from djl_python.inputs import Input
 from djl_python.outputs import Output
 from djl_python.input_parser import parse_input_with_formatter
 from djl_python.utils import get_input_details
+from djl_python.lmi_inference_service import LmiInferenceService
 
 
 def _get_value_based_on_tensor(value, index=None):
@@ -79,7 +80,7 @@ def _get_accept_and_content_type(batch_item) -> Tuple[str, str]:
     return content_type, accept
 
 
-class TRTLLMPythonService:
+class TRTLLMPythonService(LmiInferenceService):
     PYTHON_BACKEND_SUPPORTED_MODELS = {'t5'}
 
     def __init__(self):
@@ -88,6 +89,9 @@ class TRTLLMPythonService:
         self.initialized = False
         self.is_client_side_batch = []
         self.input_format_args = None
+
+    def is_initialized(self) -> bool:
+        return self.initialized
 
     def initialize(self, properties: dict):
         self.trt_configs = TensorRtLlmProperties(**properties)

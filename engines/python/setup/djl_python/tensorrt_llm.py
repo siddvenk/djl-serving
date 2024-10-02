@@ -18,10 +18,10 @@ from djl_python.properties_manager.trt_properties import TensorRtLlmProperties
 from djl_python.tensorrt_llm_python import TRTLLMPythonService
 from djl_python.utils import rolling_batch_inference
 from djl_python.input_parser import parse_input_with_formatter
-from typing import List, Tuple
+from djl_python.lmi_inference_service import LmiInferenceService
 
 
-class TRTLLMService(object):
+class TRTLLMService(LmiInferenceService):
     """
     A TRTLLMService is an intermediary for the default TensorRT-LLM handler. Its functions are invoked to turn
     Inputs into Outputs and it is responsible for sending new requests to the rolling batcher, which
@@ -34,6 +34,9 @@ class TRTLLMService(object):
         self.trt_configs = None
         self.rolling_batch = None
         self.tokenizer = None
+
+    def is_initialized(self) -> bool:
+        return self.initialized
 
     def initialize(self, properties: dict):
         self.trt_configs = TensorRtLlmProperties(**properties)

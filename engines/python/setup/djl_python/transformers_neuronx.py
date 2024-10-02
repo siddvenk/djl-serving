@@ -23,11 +23,12 @@ from djl_python.stable_diffusion_inf2 import StableDiffusionNeuronXService
 from djl_python.streaming_utils import StreamingUtils
 from djl_python.properties_manager.tnx_properties import TransformerNeuronXProperties, TnXGenerationStrategy, \
     TnXModelLoaders
-from djl_python.properties_manager.properties import StreamingEnum, is_rolling_batch_enabled
+from djl_python.properties_manager.properties import StreamingEnum
 from djl_python.neuron_utils.model_loader import TNXModelLoader, OptimumModelLoader
 from djl_python.neuron_utils.utils import task_from_config, build_vllm_rb_properties
 from djl_python.utils import rolling_batch_inference, get_input_details
 from djl_python.input_parser import parse_input_with_formatter
+from djl_python.lmi_inference_service import LmiInferenceService
 
 model = None
 
@@ -36,7 +37,7 @@ OPTIMUM_CAUSALLM_CONTINUOUS_BATCHING_MODELS = {"llama", "mistral"}
 VLLM_CONTINUOUS_BATCHING_MODELS = {"llama"}
 
 
-class TransformersNeuronXService(object):
+class TransformersNeuronXService(LmiInferenceService):
 
     def __init__(self) -> None:
         """
@@ -63,6 +64,9 @@ class TransformersNeuronXService(object):
         self.input_format_configs = None
         self._model_loader_class = TNXModelLoader
         self.input_format_args = None
+
+    def is_initialized(self) -> bool:
+        return self.initialized
 
     def optimum_not_supported(self) -> bool:
         """

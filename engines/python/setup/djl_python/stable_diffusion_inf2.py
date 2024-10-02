@@ -18,15 +18,19 @@ from io import BytesIO
 from PIL import Image
 from djl_python.neuron_utils.model_loader import OptimumStableDiffusionLoader
 from djl_python.properties_manager.sd_inf2_properties import StableDiffusionNeuronXProperties
+from djl_python.lmi_inference_service import LmiInferenceService
 
 
-class StableDiffusionNeuronXService(object):
+class StableDiffusionNeuronXService(LmiInferenceService):
 
     def __init__(self):
         self.config = None
         self.pipeline = None
         self.pipeline_loader = None
         self.initialized = False
+
+    def is_initialized(self) -> bool:
+        return self.initialized
 
     def get_pipeline_kwargs(self):
         pipeline_kwargs = {"torch_dtype": self.config.dtype}
@@ -49,7 +53,7 @@ class StableDiffusionNeuronXService(object):
             self.config.save_mp_checkpoint_path, **pipeline_kwargs)
         self.initialized = True
 
-    def inference(self, inputs: Input):
+    def inference(self, inputs: Input) -> Output:
         try:
             content_type = inputs.get_property("Content-Type")
             if content_type == "application/json":

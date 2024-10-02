@@ -35,6 +35,7 @@ from djl_python.properties_manager.properties import StreamingEnum, is_rolling_b
 from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.utils import rolling_batch_inference, get_input_details
 from djl_python.input_parser import parse_input_with_formatter
+from djl_python.lmi_inference_service import LmiInferenceService
 
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
@@ -108,7 +109,7 @@ class StopWord(StoppingCriteria):
         return False
 
 
-class HuggingFaceService(object):
+class HuggingFaceService(LmiInferenceService):
 
     def __init__(self):
         self.hf_pipeline = None
@@ -123,6 +124,9 @@ class HuggingFaceService(object):
         self.adapter_registry = {}
         self.hf_configs = None
         self.input_format_args = None
+
+    def is_initialized(self) -> bool:
+        return self.initialized
 
     def initialize(self, properties: dict):
         self.hf_configs = HuggingFaceProperties(**properties)
