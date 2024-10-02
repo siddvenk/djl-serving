@@ -13,14 +13,16 @@
 import logging
 import os
 import re
+import time
 
 import torch
+import transformers
 from transformers import (pipeline, Pipeline, AutoModelForCausalLM,
                           AutoModelForSeq2SeqLM, AutoTokenizer, AutoConfig,
                           AutoModelForSequenceClassification,
                           AutoModelForTokenClassification,
                           AutoModelForQuestionAnswering, StoppingCriteria,
-                          StoppingCriteriaList)
+                          StoppingCriteriaList, AutoProcessor)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from peft import PeftConfig, PeftModel, PeftModelForCausalLM
 from typing import List, Dict
@@ -88,6 +90,10 @@ def get_rolling_batch_class_from_str(rolling_batch_type: str):
     raise ValueError(f"Invalid rolling batch type: {rolling_batch_type}")
 
 
+def is_vision_language_model(hf_model_config):
+    return hasattr(hf_model_config, "text_config") and hasattr(hf_model_config, "vision_config")
+
+
 class StopWord(StoppingCriteria):
 
     def __init__(self, tokenizer, stop_seq):
@@ -116,6 +122,7 @@ class HuggingFaceService(object):
         self.initialized = False
         self.model = None
         self.tokenizer = None
+        self.processor = None
         self.rolling_batch = None
         self.model_config = None
         self.peft_config = None
@@ -140,6 +147,8 @@ class HuggingFaceService(object):
             self._init_tokenizer(self.hf_configs.model_id_or_path)
             self._init_model(self.hf_configs.model_id_or_path,
                              **self.hf_configs.kwargs)
+        elif is_vision_language_model(self.model_config):
+            self.hf_pipeline = self.create_vision_model_pipeline()
         else:
             if not self.hf_configs.task:
                 self.hf_configs.task = self.infer_task_from_model_architecture(
@@ -289,6 +298,65 @@ class HuggingFaceService(object):
                                  request_input.input_text,
                                  self.hf_configs.device, **parameters))
         return outputs
+
+    def create_vision_model_pipeline(self):
+        architecture = self.model_config.architectures[0]
+        model_class = getattr(transformers, architecture)
+        self.processor = AutoProcessor.from_pretrained(self.hf_configs.model_id_or_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.hf_configs.model_id_or_path)
+        self.model = model_class.from_pretrained(
+            self.hf_configs.model_id_or_path,
+            device_map="auto",
+        )
+
+        def wrapped_pipeline(inputs, *args, **kwargs):
+            model = self.model
+            processor = self.processor
+            inputs = processor(
+                text=inputs,
+                images=kwargs.pop("images", None),
+                add_special_tokens=False,
+                return_tensors="pt"
+            ).to(model.device)
+            kwargs.pop("frequency_penalty", None)
+            kwargs.pop("presence_penalty", None)
+            kwargs.pop("ignore_eos", None)
+
+            output = model.generate(**inputs, **kwargs)
+            prompt_len = inputs.input_ids.shape[-1]
+            generated_ids = output[:, prompt_len:]
+            generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+            outputs = []
+            # The existing output formatter can't be used here due to incompatible API
+            # TODO: Unify dynamic batch flow with rolling batch flow
+            for (text, ids) in zip(generated_text, generated_ids):
+                choice = {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": text,
+                    },
+                    "logprobs": None,
+                    "finish_reason": "none"
+                }
+                usage = {
+                    "prompt_tokens": prompt_len,
+                    "completion_tokens": len(ids),
+                    "total_tokens": len(ids),
+                }
+                result = {
+                    "id": f"chatcmpl-{id(text)}",
+                    "object": "chat.completion",
+                    "created": str(time.time()),
+                    "choices": [choice],
+                    "usage": usage,
+                }
+                outputs.append(result)
+            return outputs
+
+        return wrapped_pipeline
+
+        
 
     def get_pipeline(self, task: str, model_id_or_path: str, kwargs):
         # define tokenizer or feature extractor as kwargs to load it the pipeline correctly
