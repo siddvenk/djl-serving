@@ -24,10 +24,10 @@ from djl_python.properties_manager.hf_properties import HuggingFaceProperties
 from djl_python.utils import rolling_batch_inference
 from djl_python.input_parser import parse_input_with_formatter
 from djl_python.lmi_inference_service import LmiInferenceService
-from djl_python.rolling_batch.vllm_rolling_batch import VLLMRollingBatch
+from djl_python.rolling_batch.lmi_dist_rolling_batch import LmiDistRollingBatch
 
 
-class VllmInferenceService(LmiInferenceService):
+class LmiDistInferenceService(LmiInferenceService):
 
     def __init__(self):
         self.hf_pipeline = None
@@ -51,9 +51,9 @@ class VllmInferenceService(LmiInferenceService):
         self._read_model_config(self.hf_configs.model_id_or_path)
 
         self.hf_configs.kwargs["model_config"] = self.model_config
-        self.rolling_batch = VLLMRollingBatch(self.hf_configs.model_id_or_path,
-                                              properties,
-                                              **self.hf_configs.kwargs)
+        self.rolling_batch = LmiDistRollingBatch(
+            self.hf_configs.model_id_or_path, properties,
+            **self.hf_configs.kwargs)
         self._init_tokenizer(self.hf_configs.model_id_or_path)
 
         self.input_format_args = self.get_input_format_args()
@@ -146,7 +146,7 @@ class VllmInferenceService(LmiInferenceService):
         return "<image>"
 
 
-_service = VllmInferenceService()
+_service = LmiDistInferenceService()
 
 
 def register_adapter(inputs: Input):
