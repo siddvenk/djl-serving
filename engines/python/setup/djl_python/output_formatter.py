@@ -36,11 +36,10 @@ def output_formatter(function):
 
 def get_generated_text(sequence, request_output):
     parameters = request_output.input.parameters
-    generated_text = request_output.input.input_text if parameters.get(
-        "return_full_text") else ""
-    for token in sequence.tokens:
-        generated_text += token.text
-    return generated_text
+    generated_text = [request_output.input.input_text
+                      ] if parameters.get("return_full_text") else [""]
+    generated_text.extend([t.text for t in sequence.tokens])
+    return "".join(generated_text)
 
 
 def get_sequence_details(request_output: TextGenerationOutput,

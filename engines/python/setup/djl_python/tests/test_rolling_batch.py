@@ -1007,9 +1007,7 @@ class TestRollingBatch(unittest.TestCase):
             _, _, last_token = best_sequence.get_next_token()
             if last_token:
                 tokens = best_sequence.tokens
-                generated_text = ""
-                for token in tokens:
-                    generated_text += token.text
+                generated_text = "".join([t.text for t in tokens])
                 result = {"generated_text": generated_text}
                 parameters = request_output.input.parameters
                 if parameters.get("details", False):

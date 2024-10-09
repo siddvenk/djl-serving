@@ -78,10 +78,10 @@ class Input(object):
         self.content = PairList()
 
     def __str__(self):
-        cur_str = "properties: " + str(self.get_properties())
+        cur_str = ["properties: " + str(self.get_properties())]
         for key in self.get_content().get_keys():
-            cur_str += "\n{}: {}".format(key, self.get_data(key))
-        return cur_str
+            cur_str.append("{}: {}".format(key, self.get_data(key)))
+        return "\n".join(cur_str)
 
     def is_batch(self) -> bool:
         return "batch_size" in self.properties
