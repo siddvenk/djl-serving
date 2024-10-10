@@ -14,7 +14,7 @@ FROM nvidia/cuda:$version
 ARG cuda_version=cu124
 ARG djl_version=0.30.0~SNAPSHOT
 # Base Deps
-ARG python_version=3.10
+ARG python_version=3.12
 ARG torch_version=2.4.0
 ARG torch_vision_version=0.19.0
 ARG onnx_version=1.19.0
@@ -22,22 +22,22 @@ ARG pydantic_version=2.8.2
 ARG djl_converter_wheel="https://publish.djl.ai/djl_converter/djl_converter-0.30.0-py3-none-any.whl"
 # HF Deps
 ARG protobuf_version=3.20.3
-ARG transformers_version=4.43.2
-ARG accelerate_version=0.32.1
-ARG bitsandbytes_version=0.43.1
-ARG optimum_version=1.21.2
+ARG transformers_version=4.45.2
+ARG accelerate_version=1.0.0
+ARG bitsandbytes_version=0.44.1
+ARG optimum_version=1.23.0
 ARG auto_gptq_version=0.7.1
-ARG datasets_version=2.20.0
-ARG autoawq_version=0.2.5
+ARG datasets_version=3.0.1
+ARG autoawq_version=0.2.6
 ARG tokenizers_version=0.19.1
 # LMI-Dist Deps
 ARG vllm_version=0.6.1.post2
-ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.6.1/vllm_flash_attn-2.6.1-cp310-cp310-manylinux1_x86_64.whl"
-ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.2/flashinfer-0.1.2+cu121torch2.4-cp310-cp310-linux_x86_64.whl"
+ARG flash_attn_2_wheel="https://github.com/vllm-project/flash-attention/releases/download/v2.6.2/vllm_flash_attn-2.6.2-cp312-cp312-manylinux1_x86_64.whl"
+ARG flash_infer_wheel="https://github.com/flashinfer-ai/flashinfer/releases/download/v0.1.6/flashinfer-0.1.6+cu124torch2.4-cp312-cp312-linux_x86_64.whl"
 # %2B is the url escape for the '+' character
 ARG lmi_dist_wheel="https://publish.djl.ai/lmi_dist/lmi_dist-11.0.0%2Bnightly-py3-none-any.whl"
 ARG seq_scheduler_wheel="https://publish.djl.ai/seq_scheduler/seq_scheduler-0.1.0-py3-none-any.whl"
-ARG peft_version=0.11.1
+ARG peft_version=0.13.1
 
 EXPOSE 8080
 
@@ -52,8 +52,8 @@ ENV MODEL_LOADING_TIMEOUT=1200
 ENV PREDICT_TIMEOUT=240
 ENV DJL_CACHE_DIR=/tmp/.djl.ai
 # set cudnn9 library path
-ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib/
-ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/torch/lib
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.12/dist-packages/nvidia/cudnn/lib/
+ENV PYTORCH_LIBRARY_PATH=/usr/local/lib/python3.12/dist-packages/torch/lib
 ENV PYTORCH_PRECXX11=true
 ENV PYTORCH_VERSION=${torch_version}
 ENV PYTORCH_FLAVOR=cu121-precxx11
@@ -99,7 +99,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libaio-
     && pip3 cache purge \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu121 \
+RUN pip3 install torch==${torch_version} torchvision==${torch_vision_version} --extra-index-url https://download.pytorch.org/whl/cu124 \
     ${seq_scheduler_wheel} peft==${peft_version} protobuf==${protobuf_version} \
     transformers==${transformers_version} hf-transfer zstandard datasets==${datasets_version} \
     mpi4py sentencepiece tiktoken blobfile einops accelerate==${accelerate_version} bitsandbytes==${bitsandbytes_version} \
@@ -134,4 +134,4 @@ LABEL com.amazonaws.sagemaker.capabilities.accept-bind-to-port="true"
 LABEL djl-version=$djl_version
 LABEL cuda-version=$cuda_version
 # To use the 535 CUDA driver, CUDA 12.1 can work on this one too
-LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.2
+LABEL com.amazonaws.sagemaker.inference.cuda.verified_versions=12.4
