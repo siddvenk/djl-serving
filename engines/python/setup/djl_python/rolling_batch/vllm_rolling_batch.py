@@ -12,6 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 from collections import OrderedDict, defaultdict
 
+import vllm.transformers_utils.tokenizers
 from vllm import LLMEngine, SamplingParams
 from vllm.utils import random_uuid
 
@@ -49,6 +50,9 @@ class VLLMRollingBatch(RollingBatch):
         super().__init__(self.vllm_configs)
         args = get_engine_args_from_config(self.vllm_configs)
         self.engine = LLMEngine.from_engine_args(args)
+        self.is_mistral_tokenizer = isinstance(
+            self.get_tokenizer(),
+            vllm.transformers_utils.tokenizers.MistralTokenizer)
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
 

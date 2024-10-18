@@ -150,6 +150,8 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
         inputs = input_map.pop("inputs", input_map)
         param = input_map.pop("parameters", {})
 
+    # In the case of mistral tokenizer + chat template, these will actually be prompt token ids, not text
+    # See https://github.com/vllm-project/vllm/blob/v0.6.2/vllm/transformers_utils/tokenizers/mistral.py#L174
     request_input.input_text = inputs
     request_input.parameters = param
 

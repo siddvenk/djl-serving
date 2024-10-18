@@ -76,6 +76,7 @@ class VllmRbProperties(Properties):
     typical_acceptance_sampler_posterior_alpha: Optional[float] = None
     qlora_adapter_name_or_path: Optional[str] = None
     disable_logprobs_during_spec_decoding: Optional[bool] = None
+    tokenizer_mode: str = 'auto'
 
     @field_validator('engine')
     def validate_engine(cls, engine):

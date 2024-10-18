@@ -61,16 +61,17 @@ def update_request_cache_with_output(request_cache: OrderedDict,
     if not request_output.prompt_tokens_details:
         # TODO: Temp check adding the check fo T5.
         if isinstance(vllm_request_output.prompt_token_ids, list):
+            converted_ids_to_text = tokenizer.convert_ids_to_tokens(
+                vllm_request_output.prompt_token_ids)
             for index, prompt_token_id in enumerate(
                     vllm_request_output.prompt_token_ids):
                 log_prob = None
                 if vllm_request_output.prompt_logprobs and index > 0:
                     log_prob = vllm_request_output.prompt_logprobs[index][
                         prompt_token_id].logprob
-                prompt_token = Token(
-                    id=prompt_token_id,
-                    text=tokenizer.convert_ids_to_tokens(prompt_token_id),
-                    log_prob=log_prob)
+                prompt_token = Token(id=prompt_token_id,
+                                     text=converted_ids_to_text[index],
+                                     log_prob=log_prob)
                 request_output.prompt_tokens_details.append(prompt_token)
 
     # sets the details of all sequences
@@ -288,6 +289,7 @@ def get_engine_args_from_config(config: VllmRbProperties) -> EngineArgs:
             qlora_adapter_name_or_path=config.qlora_adapter_name_or_path,
             disable_logprobs_during_spec_decoding=config.
             disable_logprobs_during_spec_decoding,
+            tokenizer_mode=config.tokenizer_mode,
         )
 
 
@@ -300,8 +302,12 @@ def get_multi_modal_data(request: Request) -> dict:
     return multi_modal_data
 
 
-def get_prompt_inputs(request: Request):
+def get_prompt_inputs(request: Request, is_mistral_tokenizer=False):
     prompt_inputs: PromptInputs = {"prompt": request.request_input.input_text}
+    # In the case of mistral tokenizer + chat template, these will actually be prompt token ids, not text
+    # See https://github.com/vllm-project/vllm/blob/v0.6.2/vllm/transformers_utils/tokenizers/mistral.py#L174
+    if is_mistral_tokenizer:
+        prompt_inputs = {"prompt_token_ids": request.request_input.input_text}
     multi_modal_data = get_multi_modal_data(request)
     if multi_modal_data:
         prompt_inputs["multi_modal_data"] = multi_modal_data

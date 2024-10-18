@@ -12,6 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 import logging
 import os
+import vllm
 from typing import List
 from collections import OrderedDict, defaultdict
 
@@ -87,6 +88,7 @@ class LmiDistRollingBatch(RollingBatch):
             disable_sliding_window=self.lmi_dist_config.disable_sliding_window,
             limit_mm_per_prompt=self.lmi_dist_config.limit_mm_per_prompt,
             use_passive_workers=self.lmi_dist_config.use_passive_workers,
+            tokenizer_mode=self.lmi_dist_config.tokenizer_mode,
             **engine_kwargs)
 
         kwargs = {}
@@ -102,6 +104,9 @@ class LmiDistRollingBatch(RollingBatch):
                 "https://github.com/deepjavalibrary/djl-serving/tree/master/serving/docs/lmi/announcements/breaking_changes.md"
             )
         self.engine = engine_from_args(engine_args, **kwargs)
+        self.is_mistral_tokenizer = isinstance(
+            self.get_tokenizer(),
+            vllm.transformers_utils.tokenizers.MistralTokenizer)
         self.request_cache = OrderedDict()
         self.lora_ids = defaultdict(lambda: len(self.lora_ids) + 1)
 
