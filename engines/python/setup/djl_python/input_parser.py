@@ -77,6 +77,7 @@ def parse_input_with_formatter(inputs: Input, **kwargs) -> ParsedInput:
     input_formatter_function = configs.input_formatter if configs.input_formatter else format_input
     for i in range(start_batch_id, len(batch)):
         input_item = batch[i]
+        logging.info(f"input item is {input_item}")
         client_request_id = input_item.get_property("requestId")
         try:
             # input formatter can be user written as well. We look for model.py and search for the decorator.
@@ -123,6 +124,7 @@ def format_input(input_item: Input, **kwargs) -> RequestInput:
     request_input = TextInput()
     content_type = input_item.get_property("Content-Type")
     input_map = decode(input_item, content_type)
+    logging.info(f"info map is {input_map}")
     parse_text_inputs_params(request_input, input_item, input_map, **kwargs)
     parse_adapters(request_input, input_item, input_map, **kwargs)
     return request_input
@@ -137,6 +139,8 @@ def parse_text_inputs_params(request_input: TextInput, input_item: Input,
     is_mistral_tokenizer = kwargs.get("is_mistral_tokenizer", False)
     is_rolling_batch = kwargs.get("is_rolling_batch", False)
     is_bedrock = False
+    logging.info(f"input item is {input_item}")
+    logging.info(f"input map is {input_map}")
     if configs is not None:
         is_bedrock = configs.bedrock_compat
     if is_chat_completions_request(input_map):
@@ -248,6 +252,7 @@ def _fetch_adapters_from_input(input_map: dict, input_item: Input,
 
 
 def parse_lmi_default_request_rolling_batch(payload):
+    logging.info(f"paylod is {payload}")
     if not isinstance(payload, dict):
         raise ValueError(
             f"Invalid request payload. Request payload should be a json object specifying the 'inputs' field. Received payload {payload}"
