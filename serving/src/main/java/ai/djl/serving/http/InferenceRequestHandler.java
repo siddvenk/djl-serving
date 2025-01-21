@@ -197,6 +197,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             QueryStringDecoder decoder,
             String modelName)
             throws ModelNotFoundException {
+        logger.info("[siddhave] handling invocations request");
         Input input = requestParser.parseRequest(req, decoder);
         String requestId = NettyUtils.getRequestId(ctx.channel());
         input.addProperty("requestId", requestId);
@@ -241,8 +242,10 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         }
 
         ModelManager modelManager = ModelManager.getInstance();
+        logger.info("[siddhave] fetching workflow from model manager for {}", workflowName);
         Workflow workflow = modelManager.getWorkflow(workflowName, version, true);
         if (workflow == null) {
+            logger.info("[siddhave] workflow not found for {}", workflowName);
             String regex = config.getModelUrlPattern();
             if (regex == null) {
                 throw new ModelNotFoundException("Model or workflow not found: " + workflowName);
@@ -301,6 +304,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
 
     void runJob(
             ModelManager modelManager, ChannelHandlerContext ctx, Workflow workflow, Input input) {
+        logger.info("[siddhave] running job from InferenceRequestHandler");
         Session session = NettyUtils.getSession(ctx.channel());
         session.setInput(input);
         String sync = input.getProperty(X_SYNCHRONOUS, "true");
@@ -386,6 +390,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             return;
         }
 
+        logger.info("[siddhave] inference job completed, sending output back to user");
         HttpResponseStatus status;
         int code = output.getCode();
         if (code == 200) {
@@ -414,8 +419,11 @@ public class InferenceRequestHandler extends HttpRequestHandler {
             try {
                 boolean first = true;
                 ChunkedBytesSupplier supplier = (ChunkedBytesSupplier) data;
+                logger.info("[siddhave] about to check on that supplier");
                 while (supplier.hasNext()) {
+                    logger.info("[siddhave] reading next chunk from bytes supplier");
                     byte[] buf = supplier.nextChunk(chunkReadTime, TimeUnit.SECONDS);
+                    logger.info("[siddhave] read chunk from bytes supplier");
                     // Defer sending HTTP header until first chunk received.
                     // This allows inference update HTTP code.
                     // If this is the first and last chunk, we're in a non-streaming case and can
@@ -434,6 +442,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             resp.content().writeBytes(buf);
                         }
                         NettyUtils.sendHttpResponse(ctx, resp, true);
+                        logger.info("[siddhave] finished non streaming request");
                         return;
                     }
                     if (first) {
@@ -445,7 +454,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                         NettyUtils.sendHttpResponse(ctx, resp, true, false);
                         first = false;
                     }
-
+                    logger.info("[siddhave] finished chunk for this request, on to the next chunk");
                     ByteBuf bb = Unpooled.wrappedBuffer(buf);
                     ctx.writeAndFlush(new DefaultHttpContent(bb));
                 }

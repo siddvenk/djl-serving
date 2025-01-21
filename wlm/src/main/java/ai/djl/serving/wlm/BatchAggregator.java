@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 abstract class BatchAggregator<I, O> {
 
     private static final Logger MODEL_METRIC = LoggerFactory.getLogger("model_metric");
+    private static final Logger logger = LoggerFactory.getLogger(BatchAggregator.class);
 
     private Dimension dimension;
     protected int batchSize;
@@ -55,6 +56,10 @@ abstract class BatchAggregator<I, O> {
         this.maxBatchDelayMicros = wpc.getMaxBatchDelayMillis() * 1000L;
         this.jobQueue = jobQueue;
         wjs = new ArrayList<>();
+        logger.info(
+                "[siddhave] created new batch aggregator with batch size {}, maxBatchDelay {}",
+                batchSize,
+                maxBatchDelayMicros);
     }
 
     /**
@@ -91,6 +96,7 @@ abstract class BatchAggregator<I, O> {
     /** Sends to response to all waiting clients. */
     public void sendResponse() {
         for (WorkerJob<I, O> wj : wjs) {
+            logger.info("[siddhave] sending response for {}", wj.getJob().toString());
             wj.getFuture().complete(wj.getJob().getOutput());
             long latency = wj.getJob().getWaitingMicroSeconds();
             MODEL_METRIC.info(

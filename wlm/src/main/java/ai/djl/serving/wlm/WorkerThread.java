@@ -82,14 +82,19 @@ public final class WorkerThread<I, O> implements Runnable {
         this.state = WorkerState.WORKER_STARTED;
         List<Job<I, O>> req = null;
         String errorMessage = "Worker shutting down";
+        logger.info("WorkerThread {} is running", workerId);
         try {
             runAllConfigJobs(); // Run initial config jobs
             while (isRunning() && !aggregator.isFinished()) {
+                logger.info("[siddhave] Getting a new request from the aggregator");
                 req = aggregator.getRequest();
+                logger.info("[siddhave] Got new request from aggregator");
                 if (req != null && !req.isEmpty()) {
                     state = WorkerState.WORKER_BUSY;
                     try {
+                        logger.info("[siddhave] running the job");
                         runJobs(req);
+                        logger.info("[siddhave] ran the job, sending response via aggregator");
                         aggregator.sendResponse();
                     } catch (TranslateException e) {
                         logger.warn("{}: Failed to predict", workerId, e);
@@ -142,8 +147,10 @@ public final class WorkerThread<I, O> implements Runnable {
                 input.stream().collect(Collectors.groupingBy(Job::getRunner));
         for (Map.Entry<Optional<JobFunction<I, O>>, List<Job<I, O>>> fjob : jobs.entrySet()) {
             if (fjob.getKey().isPresent()) {
+                logger.info("[siddhave] running job via Job.runall");
                 Job.runAll(fjob.getValue(), fjob.getKey().get());
             } else {
+                logger.info("[siddhave] running job via threadconfig");
                 threadConfig.run(fjob.getValue());
             }
         }
@@ -330,8 +337,10 @@ public final class WorkerThread<I, O> implements Runnable {
                 throw new IllegalArgumentException("jobQueue has to be set.");
             }
             if (fixPoolThread) {
+                logger.info("[siddhave] creating new permanent batch aggregator");
                 aggregator = new PermanentBatchAggregator<>(workerPoolConfig, jobQueue);
             } else {
+                logger.info("[siddhave] creating new temporary batch aggregator");
                 aggregator = new TemporaryBatchAggregator<>(workerPoolConfig, jobQueue);
             }
             return new WorkerThread<>(this);

@@ -122,7 +122,13 @@ class PythonEngine(object):
         is_entry_point_verified = False
         while True:
             inputs = Input()
+            logging.info(
+                "[siddhave] reading from socket on djl python engine side")
             inputs.read(cl_socket)
+            logging.info(
+                "[siddhave] finished reading from socket on djl python engine side"
+            )
+            logging.info(f"[siddhave] inputs read are {inputs}")
             prop = inputs.get_properties()
             if self.tensor_parallel_degree:
                 prop["tensor_parallel_degree"] = self.tensor_parallel_degree
@@ -175,7 +181,7 @@ class PythonEngine(object):
                     outputs = Output().error(str(e))
 
             outputs.send(cl_socket)
-            logging.debug("Outputs is sent to DJL engine.")
+            logging.debug(f"Outputs is sent to DJL engine. {outputs}")
             try:
                 outputs.execute_finalize()
             except Exception as e:

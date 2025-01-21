@@ -57,6 +57,7 @@ public class WorkerPool<I, O> {
         this.threadPool = threadPool;
         workerGroups = new ConcurrentHashMap<>();
         refCnt = new AtomicInteger(1);
+        logger.info("[siddhave] creating new worker pool");
     }
 
     /** Increases the reference count. */

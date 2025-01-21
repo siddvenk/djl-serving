@@ -19,6 +19,9 @@ import ai.djl.serving.wlm.WorkerPoolConfig;
 import ai.djl.serving.workflow.Workflow;
 import ai.djl.serving.workflow.WorkflowExpression.Item;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -27,6 +30,8 @@ import java.util.concurrent.CompletableFuture;
  * (typically a model) through the {@link ai.djl.serving.wlm.WorkLoadManager} in the workflow.
  */
 public class WlmWorkflowFunction extends WorkflowFunction {
+
+    private static final Logger logger = LoggerFactory.getLogger(WlmWorkflowFunction.class);
 
     WorkerPoolConfig<Input, Output> workerPoolConfig;
 
@@ -51,7 +56,7 @@ public class WlmWorkflowFunction extends WorkflowFunction {
                             + " should have one arg, but has "
                             + args.size());
         }
-
+        logger.info("[siddhave] submitting job for WlmWorkflowFunction to WorkloadManager");
         return evaluateArgs(args)
                 .thenCompose(
                         processedArgs ->

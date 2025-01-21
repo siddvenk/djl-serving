@@ -97,6 +97,7 @@ public class ModelServer {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        logger.info("[siddhave] DJL Serving started");
         Options options = Arguments.getOptions();
         try {
             DefaultParser parser = new DefaultParser();
@@ -378,6 +379,7 @@ public class ModelServer {
     private void loadModels(List<Workflow> workflows) {
         ModelManager modelManager = ModelManager.getInstance();
         for (Workflow workflow : workflows) {
+            logger.info("[siddhave] registering workflow: {}", workflow);
             CompletableFuture<Void> f = modelManager.registerWorkflow(workflow);
             f.exceptionally(
                     t -> {

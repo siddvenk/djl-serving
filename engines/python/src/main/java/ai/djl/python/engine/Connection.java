@@ -75,6 +75,11 @@ class Connection {
         requestHandler = new RequestHandler();
         port = 19000 + basePort;
         socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank, hostname);
+        logger.info(
+                "[siddhave] creating new connection with port {}, rank {}, hostname {}",
+                port,
+                rank,
+                hostname);
     }
 
     static Process startPython(PyEnv pyEnv, Model model, int workerId, int port, String[] hosts)
@@ -112,11 +117,13 @@ class Connection {
     }
 
     CompletableFuture<Output> send(Input input) throws InterruptedException {
+        logger.info("[siddhave] sending inputs from java to python, input: {}", input.toString());
         CompletableFuture<Output> f = new CompletableFuture<>();
         requestHandler.setResponseFuture(f);
         if (!channel.isActive() || !channel.writeAndFlush(input).sync().isSuccess()) {
             throw new IllegalStateException("Failed to send data to python.");
         }
+        logger.info("[siddhave] sending has finished");
         return f;
     }
 
@@ -438,7 +445,9 @@ class Connection {
         /** {@inheritDoc} */
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, Output msg) {
+            logger.info("[siddhave] RequestHandler channelRead0 start");
             future.complete(msg);
+            logger.info("[siddhave] RequestHandler channelRead0 end");
         }
 
         /** {@inheritDoc} */

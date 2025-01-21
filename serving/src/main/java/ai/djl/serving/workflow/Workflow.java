@@ -162,6 +162,7 @@ public class Workflow implements AutoCloseable {
      * @return a future of the result of the execution
      */
     public CompletableFuture<Output> execute(WorkLoadManager wlm, Input input) {
+        logger.info("[siddhave] executing workflow from Workflow");
         logger.trace("Beginning execution of workflow: {}", name);
         WorkflowExecutor ex = new WorkflowExecutor(wlm, input);
         return ex.execute(OUT)
@@ -313,6 +314,8 @@ public class Workflow implements AutoCloseable {
                     expr.getExecutableArgs().stream()
                             .map(arg -> new WorkflowArgument(this, arg))
                             .collect(Collectors.toList());
+            logger.info("[siddhave] executing workflow function: {}", workflowFunction);
+            logger.info("[siddhave] using workflow arguments: {}", args);
             return workflowFunction.run(this, args);
         }
 

@@ -65,11 +65,13 @@ public class PyModel extends BaseModel {
         pyEnv = new PyEnv(mpiMode);
         dataType = DataType.FLOAT32;
         workerQueue = new LinkedBlockingDeque<>();
+        logger.info("[siddhave] creating a new PyModel");
     }
 
     /** {@inheritDoc} */
     @Override
     public void load(Path modelPath, String prefix, Map<String, ?> options) throws IOException {
+        logger.info("[siddhave] loading the Python Model");
         setModelDir(modelPath);
         if (block != null) {
             throw new UnsupportedOperationException(
@@ -278,6 +280,7 @@ public class PyModel extends BaseModel {
     /** {@inheritDoc} */
     @Override
     public <I, O> Predictor<I, O> newPredictor(Translator<I, O> translator, Device device) {
+        logger.info("[siddhave] provisioning new predictor for PyModel");
         int timeout = pyEnv.getPredictTimeout();
         if (pyEnv.isMpiMode()) {
             if (workerQueue.isEmpty()) {

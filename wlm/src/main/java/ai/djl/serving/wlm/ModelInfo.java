@@ -212,6 +212,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     @Override
     @SuppressWarnings("unchecked")
     public void load(Device device) throws ModelException, IOException {
+        logger.info("[siddhave] in ModelInfo.load");
         if (getModels().containsKey(device)) {
             return;
         }
@@ -519,6 +520,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
     /** {@inheritDoc} */
     @Override
     public void initialize() throws IOException, ModelException {
+        logger.info("[siddhave] in ModelInfo initialize");
         if (initialize) {
             return;
         }
@@ -1231,6 +1233,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
             super(device);
             model = getModel(device);
             predictor = model.newPredictor();
+            logger.info("[siddhave] creating a new model thread in Model Info");
 
             boolean logModelMetric = Boolean.parseBoolean(model.getProperty("log_request_metric"));
             if (logModelMetric) {

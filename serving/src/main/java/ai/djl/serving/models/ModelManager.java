@@ -99,6 +99,7 @@ public final class ModelManager {
                     for (Map.Entry<String, WorkerPoolConfig<Input, Output>> entry :
                             wpcs.entrySet()) {
                         String key = entry.getKey();
+                        logger.info("[siddhave] in registerWorkflow processing wpc key {}", key);
                         WorkerPoolConfig<Input, Output> workerPoolConfig = entry.getValue();
                         try {
                             // download model and configure per model settings
@@ -125,6 +126,8 @@ public final class ModelManager {
 
                             wlm.registerWorkerPool(workerPoolConfig);
                             String[] devices = workerPoolConfig.getLoadOnDevices();
+                            logger.info(
+                                    "[siddhave] load on devices are {}", Arrays.toString(devices));
                             if (engine != null) {
                                 logger.info(
                                         "Loading model on {}:{}", engine, Arrays.toString(devices));
@@ -339,6 +342,7 @@ public final class ModelManager {
      * @return the {@code CompletableFuture}
      */
     public CompletableFuture<Output> runJob(Workflow workflow, Input input) {
+        logger.info("[siddhave] running job from model manager");
         return workflow.execute(wlm, input);
     }
 

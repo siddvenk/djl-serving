@@ -43,6 +43,7 @@ public class WorkLoadManager {
 
     /** Constructs a {@link WorkLoadManager} instance. */
     public WorkLoadManager() {
+        logger.info("[siddhave] creating a new WorkloadManager");
         threadPool =
                 Executors.newCachedThreadPool(
                         r -> {
@@ -94,6 +95,7 @@ public class WorkLoadManager {
      * @return {@code true} if submit success, false otherwise.
      */
     public <I, O> CompletableFuture<O> runJob(Job<I, O> job) {
+        logger.info("[siddhave] running the job from wlm");
         CompletableFuture<O> result = new CompletableFuture<>();
         WorkerPoolConfig<I, O> wpc = job.getWpc();
         if (wpc.getStatus() != WorkerPoolConfig.Status.READY) {
@@ -110,6 +112,7 @@ public class WorkLoadManager {
             return result;
         }
         LinkedBlockingDeque<WorkerJob<I, O>> queue = pool.getJobQueue();
+        logger.info("[siddhave] job queue size is currently {}", queue.size());
         if ((queue.remainingCapacity() == 1 && pool.isAllWorkerBusy())
                 || pool.isAllWorkerDied()
                 || !queue.offer(new WorkerJob<>(job, result))) {

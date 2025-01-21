@@ -97,6 +97,9 @@ class PyProcess {
 
     Output predict(Input inputs, int timeout, boolean initialLoad) {
         try {
+            logger.info(
+                    "[siddhave] calling python with predict request, initial load is {}",
+                    initialLoad);
             if (inputs.getProperty("handler", null) == null) {
                 String handler = pyEnv.getHandler();
                 if (handler != null) {
@@ -137,7 +140,7 @@ class PyProcess {
                     logger.info("Model [{}] initialized.", model.getName());
                 }
             }
-
+            logger.info("[siddhave] result returned from python side");
             return output;
         } catch (Throwable e) { // use Throwable to workaround spotbug false alarm
             logger.debug("predict[init={}] exception: {}", initialLoad, e.getClass().getName());

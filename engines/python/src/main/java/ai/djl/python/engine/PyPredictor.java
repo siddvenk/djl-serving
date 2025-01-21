@@ -27,6 +27,9 @@ import ai.djl.translate.TranslatorContext;
 import ai.djl.util.Pair;
 import ai.djl.util.PairList;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,6 +40,7 @@ import java.util.regex.Pattern;
 class PyPredictor<I, O> extends Predictor<I, O> {
 
     private static final Pattern BATCH_PATTERN = Pattern.compile("batch_(\\d+)\\.(.*)");
+    private static final Logger logger = LoggerFactory.getLogger(PyPredictor.class);
 
     private PyProcess process;
     private int timeout;
@@ -58,6 +62,7 @@ class PyPredictor<I, O> extends Predictor<I, O> {
         if (isRollingBatch) {
             rollingBatch = new RollingBatch(process, model, timeout);
         }
+        logger.info("[siddhave] created new PyPredictor");
     }
 
     /** {@inheritDoc} */
@@ -79,7 +84,9 @@ class PyPredictor<I, O> extends Predictor<I, O> {
                 Output output;
                 Input input = (Input) first;
                 if (isRollingBatch && !input.getProperties().containsKey("handler")) {
+                    logger.info("[siddhave] sending request to rollingbatch for inference");
                     output = rollingBatch.addInput(input, timeout);
+                    logger.info("[siddhave] output from rolling batch received");
                 } else {
                     output = process.predict(input, timeout, false);
                 }

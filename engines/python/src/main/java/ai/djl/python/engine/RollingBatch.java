@@ -100,6 +100,7 @@ class RollingBatch implements Runnable {
     /** {@inheritDoc} */
     @Override
     public void run() {
+        logger.info("[siddhave] kicking off the Rolling Batch Thread");
         currentThread = Thread.currentThread();
         while (!stop) {
             int size;
@@ -107,6 +108,7 @@ class RollingBatch implements Runnable {
             try {
                 lock.lock();
                 if (list.isEmpty()) {
+                    logger.info("[siddhave] waiting for new requests in list");
                     canRead.await();
                 }
 
@@ -115,6 +117,7 @@ class RollingBatch implements Runnable {
                     resetRollingBatch = false;
                 }
                 size = list.size();
+                logger.info("[siddhave] rolling batch list size is {}", size);
                 for (int i = 0; i < size; ++i) {
                     Request req = list.get(i);
                     // TODO: max 999 batch size
@@ -129,6 +132,10 @@ class RollingBatch implements Runnable {
                     for (Map.Entry<String, String> entry : req.getProperties()) {
                         String key = prefix + entry.getKey();
                         batch.addProperty(key, entry.getValue());
+                        logger.info(
+                                "[siddhave] Adding key {}, value {} to batch",
+                                key,
+                                entry.getValue());
                     }
 
                     batch.add(prefix + "data", req.getRequest());
@@ -138,6 +145,7 @@ class RollingBatch implements Runnable {
                     }
                 }
                 batch.addProperty("batch_size", String.valueOf(size));
+                logger.info("[siddhave] batch size is currently {}", size);
             } catch (InterruptedException e) {
                 logger.warn("rolling batch loop interrupted.", e);
                 break;
@@ -147,7 +155,9 @@ class RollingBatch implements Runnable {
 
             Output output;
             try {
+                logger.info("[siddhave] submitting all requests to python for prediction");
                 output = process.predict(batch, timeout, false);
+                logger.info("[siddhave] received response from python for batch");
             } catch (EngineException e) {
                 logger.warn("prediction failed.", e);
                 list.clear();
