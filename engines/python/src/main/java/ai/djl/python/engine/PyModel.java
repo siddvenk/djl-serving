@@ -150,6 +150,9 @@ public class PyModel extends BaseModel {
                     case "mpi_mode":
                         pyEnv.setMpiMode(Boolean.parseBoolean(value));
                         break;
+                    case "async_mode":
+                        pyEnv.setAsyncMode(Boolean.parseBoolean(value));
+                        break;
                     default:
                         break;
                 }
@@ -286,11 +289,11 @@ public class PyModel extends BaseModel {
             if (workerQueue.isEmpty()) {
                 throw new EngineException("There are no devices left to create new workers");
             }
-            return new PyPredictor<>(this, workerQueue.poll(), timeout, translator, device);
+            return new PyPredictor<>(this, workerQueue.poll(), timeout, translator, device, pyEnv.isAsyncMode());
         }
         PyProcess worker = new PyProcess(this, pyEnv, -1);
         worker.startPythonProcess();
-        return new PyPredictor<>(this, worker, timeout, translator, device);
+        return new PyPredictor<>(this, worker, timeout, translator, device, pyEnv.isAsyncMode());
     }
 
     /** {@inheritDoc} */
