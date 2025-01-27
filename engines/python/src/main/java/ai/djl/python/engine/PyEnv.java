@@ -64,6 +64,7 @@ public class PyEnv {
 
     private boolean enableVenv;
     private boolean venvCreated;
+    private boolean asyncMode;
 
     /**
      * Constructs a new {@code PyEnv} instance.
@@ -550,6 +551,24 @@ public class PyEnv {
             return "debug";
         }
         return "info";
+    }
+
+    /**
+     * Sets whether to start the python engine in async mode.
+     *
+     * @param asyncMode whether to enable async python engine mode.
+     */
+    public void setAsyncMode(boolean asyncMode) {
+        this.asyncMode = asyncMode;
+    }
+
+    /**
+     * Whether the python engine is async.
+     *
+     * @return the flag.
+     */
+    public boolean isAsyncMode() {
+        return this.asyncMode;
     }
 
     String[] getEnvironmentVars(Model model) {

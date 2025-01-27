@@ -91,6 +91,10 @@ class ArgParser(object):
                             type=str,
                             default="info",
                             help="log level to use for djl_python logging")
+        parser.add_argument("--async-mode",
+                            required=False,
+                            action=argparse.BooleanOptionalAction,
+                            help="whether to start the engine in async mode")
         return parser
 
     @staticmethod

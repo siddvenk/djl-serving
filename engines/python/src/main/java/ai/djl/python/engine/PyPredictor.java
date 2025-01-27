@@ -48,7 +48,8 @@ class PyPredictor<I, O> extends Predictor<I, O> {
             PyProcess process,
             int timeout,
             Translator<I, O> translator,
-            Device device) {
+            Device device,
+            boolean asyncMode) {
         super(model, translator, device, false);
         this.process = process;
         this.timeout = timeout;
@@ -56,7 +57,11 @@ class PyPredictor<I, O> extends Predictor<I, O> {
                 model.getProperty("rolling_batch") != null
                         && !"disable".equals(model.getProperty("rolling_batch"));
         if (isRollingBatch) {
-            rollingBatch = new RollingBatch(process, model, timeout);
+            if (asyncMode) {
+                throw new UnsupportedOperationException("Async Rolling Batch not supported");
+            } else {
+                rollingBatch = new SyncRollingBatch(process, model, timeout);
+            }
         }
     }
 
