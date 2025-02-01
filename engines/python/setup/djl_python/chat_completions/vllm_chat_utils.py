@@ -70,10 +70,10 @@ def parse_chat_completions_request_vllm(
     tool_dicts = None if chat_params.tools is None else [
         tool.model_dump() for tool in chat_params.tools
     ]
-    # TODO - figure out what we need to pass for given format
+
     content_format = resolve_chat_template_content_format(
-        chat_template=None,
-        given_format="auto",
+        chat_template=configs.chat_template,
+        given_format=configs.chat_template_content_format,
         tokenizer=tokenizer,
     )
 

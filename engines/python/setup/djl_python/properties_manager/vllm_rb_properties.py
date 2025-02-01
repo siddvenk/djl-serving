@@ -12,7 +12,7 @@
 # the specific language governing permissions and limitations under the License.
 import ast
 import logging
-from typing import Optional, Any, Dict, Tuple
+from typing import Optional, Any, Dict, Tuple, Literal
 from pydantic import field_validator, model_validator, ConfigDict, Field
 from vllm import EngineArgs
 from vllm.utils import FlexibleArgumentParser
@@ -52,10 +52,10 @@ def construct_vllm_args_list(vllm_engine_args: dict,
 
 class VllmRbProperties(Properties):
     engine: Optional[str] = None
-    # The following configs have different names in DJL compared to vLLM, we only accept DJL name currently
+    # The following configs have different names in DJL compared to vLLM engine args, we only accept DJL name currently
     tensor_parallel_degree: int = 1
     pipeline_parallel_degree: int = 1
-    # The following configs have different names in DJL compared to vLLM, either is accepted
+    # The following configs have different names in DJL compared to vLLM engine args, either is accepted
     quantize: Optional[str] = Field(alias="quantization",
                                     default=EngineArgs.quantization)
     max_rolling_batch_prefill_tokens: Optional[int] = Field(
@@ -63,7 +63,7 @@ class VllmRbProperties(Properties):
         default=EngineArgs.max_num_batched_tokens)
     cpu_offload_gb_per_gpu: float = Field(alias="cpu_offload_gb",
                                           default=EngineArgs.cpu_offload_gb)
-    # The following configs have different defaults, or additional processing in DJL compared to vLLM
+    # The following configs have different defaults or additional processing in DJL compared to vLLM engine args
     dtype: str = "auto"
     max_loras: int = 4
     # The following configs have broken processing in vllm via the FlexibleArgumentParser

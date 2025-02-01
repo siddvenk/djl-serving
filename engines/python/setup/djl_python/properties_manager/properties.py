@@ -11,9 +11,8 @@
 # BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for
 # the specific language governing permissions and limitations under the License.
 import logging
-import os
 from enum import Enum
-from typing import Optional, Union, Callable, Any
+from typing import Optional, Union, Callable, Any, Literal
 from pydantic import BaseModel, field_validator, model_validator, ValidationInfo, ConfigDict
 
 
@@ -68,6 +67,10 @@ class Properties(BaseModel):
     # Spec_dec
     draft_model_id: Optional[str] = None
     spec_length: Optional[int] = 0
+
+    # chat
+    chat_template_content_format: Literal["auto", "string", "openai"] = "auto"
+    chat_template: Optional[str] = None
 
     # model_config is for pydantic configurations for BaseModel.
     model_config = ConfigDict(arbitrary_types_allowed=True,
