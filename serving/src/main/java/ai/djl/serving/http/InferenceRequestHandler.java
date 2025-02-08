@@ -166,6 +166,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 input.setCancelled(true);
             }
         }
+        logger.info("channelInactive");
         super.channelInactive(ctx);
     }
 
