@@ -60,6 +60,8 @@ class PythonEngine(object):
                                                        "is_output_formatter")
         self.input_formatter = get_annotated_function(args.model_dir,
                                                       "is_input_formatter")
+        self.is_entry_point_verified = False
+        self.async_mode = args.async_mode
 
         if self.sock_type == "unix":
             if self.sock_name is None:
@@ -119,67 +121,80 @@ class PythonEngine(object):
         # workaround error(35, 'Resource temporarily unavailable') on OSX
         cl_socket.setblocking(True)
 
-        is_entry_point_verified = False
         while True:
-            inputs = Input()
-            inputs.read(cl_socket)
-            prop = inputs.get_properties()
-            if self.tensor_parallel_degree:
-                prop["tensor_parallel_degree"] = self.tensor_parallel_degree
-            if self.pipeline_parallel_degree:
-                prop[
-                    "pipeline_parallel_degree"] = self.pipeline_parallel_degree
-            if self.cluster_size:
-                prop["cluster_size"] = self.cluster_size
-            prop["device_id"] = self.device_id
+            if self.async_mode:
+                self.handle_request_async(cl_socket)
+            else:
+                self.handle_request(cl_socket)
 
-            if "output_formatter" in prop:
-                if hasattr(self.service, prop["output_formatter"]):
-                    # TODO: custom output_formatter in serving.properties is deprecated. Remove users are migrated.
-                    prop["output_formatter"] = getattr(
-                        self.service, prop["output_formatter"])
-            elif self.output_formatter:
-                prop["output_formatter"] = self.output_formatter
+    def handle_request_async(self, cl_socket):
+        pass
 
-            if self.input_formatter:
-                prop["input_formatter"] = self.input_formatter
-            function_name = inputs.get_function_name()
-            if not is_entry_point_verified:
-                if self.recommended_entry_point:
-                    if not has_function_in_module(self.service.module,
-                                                  function_name):
-                        self.service = load_model_service(
-                            self.model_dir, self.recommended_entry_point,
-                            self.device_id)
-                        logging.info(
-                            f"{self.entry_point} file has no handler function {function_name}."
-                            f"Hence choosing the LMI recommended entry point {self.recommended_entry_point}"
-                        )
-                is_entry_point_verified = True
+    def handle_request(self, cl_socket):
+        inputs = Input()
+        logging.info(
+            "[siddhave] reading from socket on djl python engine side")
+        inputs.read(cl_socket)
+        logging.info(
+            "[siddhave] finished reading from socket on djl python engine side"
+        )
+        logging.info(f"[siddhave] inputs read are {inputs}")
+        prop = inputs.get_properties()
+        if self.tensor_parallel_degree:
+            prop["tensor_parallel_degree"] = self.tensor_parallel_degree
+        if self.pipeline_parallel_degree:
+            prop["pipeline_parallel_degree"] = self.pipeline_parallel_degree
+        if self.cluster_size:
+            prop["cluster_size"] = self.cluster_size
+        prop["device_id"] = self.device_id
 
-            try:
-                outputs = self.service.invoke_handler(function_name, inputs)
-                if outputs is None:
-                    outputs = Output(code=204, message="No content")
-                elif not isinstance(outputs, Output):
-                    outputs = Output().error(
-                        f"Invalid output type: {type(outputs)}")
-            except Exception as e:
-                logging.exception("Failed invoke service.invoke_handler()")
-                if (type(e).__name__ == "OutOfMemoryError"
-                        or type(e).__name__ == "MemoryError"
-                        or "No available memory for the cache blocks" in str(e)
-                        or "CUDA error: out of memory" in str(e)):
-                    outputs = Output(code=507, message=str(e))
-                else:
-                    outputs = Output().error(str(e))
+        if "output_formatter" in prop:
+            if hasattr(self.service, prop["output_formatter"]):
+                # TODO: custom output_formatter in serving.properties is deprecated. Remove users are migrated.
+                prop["output_formatter"] = getattr(self.service,
+                                                   prop["output_formatter"])
+        elif self.output_formatter:
+            prop["output_formatter"] = self.output_formatter
 
-            outputs.send(cl_socket)
-            logging.debug("Outputs is sent to DJL engine.")
-            try:
-                outputs.execute_finalize()
-            except Exception as e:
-                logging.exception(f"Failed on finalize function: {e}")
+        if self.input_formatter:
+            prop["input_formatter"] = self.input_formatter
+        function_name = inputs.get_function_name()
+        if not self.is_entry_point_verified:
+            if self.recommended_entry_point:
+                if not has_function_in_module(self.service.module,
+                                              function_name):
+                    self.service = load_model_service(
+                        self.model_dir, self.recommended_entry_point,
+                        self.device_id)
+                    logging.info(
+                        f"{self.entry_point} file has no handler function {function_name}."
+                        f"Hence choosing the LMI recommended entry point {self.recommended_entry_point}"
+                    )
+            self.is_entry_point_verified = True
+
+        try:
+            outputs = self.service.invoke_handler(function_name, inputs)
+            if outputs is None:
+                outputs = Output(code=204, message="No content")
+            elif not isinstance(outputs, Output):
+                outputs = Output().error(
+                    f"Invalid output type: {type(outputs)}")
+        except Exception as e:
+            logging.exception("Failed invoke service.invoke_handler()")
+            if (type(e).__name__ == "OutOfMemoryError"
+                    or type(e).__name__ == "MemoryError"
+                    or "No available memory for the cache blocks" in str(e)
+                    or "CUDA error: out of memory" in str(e)):
+                outputs = Output(code=507, message=str(e))
+            else:
+                outputs = Output().error(str(e))
+
+        outputs.send(cl_socket)
+        logging.debug(f"Outputs is sent to DJL engine. {outputs}")
+        try:
+            outputs.execute_finalize()
+        except Exception as e:
+            logging.exception(f"Failed on finalize function: {e}")
 
 
 def main():

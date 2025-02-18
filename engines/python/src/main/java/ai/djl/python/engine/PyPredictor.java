@@ -42,16 +42,19 @@ class PyPredictor<I, O> extends Predictor<I, O> {
     private int timeout;
     private boolean isRollingBatch;
     private RollingBatch rollingBatch;
+    private boolean asyncMode;
 
     public PyPredictor(
             Model model,
             PyProcess process,
             int timeout,
             Translator<I, O> translator,
-            Device device) {
+            Device device,
+            boolean asyncMode) {
         super(model, translator, device, false);
         this.process = process;
         this.timeout = timeout;
+        this.asyncMode = asyncMode;
         isRollingBatch =
                 model.getProperty("rolling_batch") != null
                         && !"disable".equals(model.getProperty("rolling_batch"));
