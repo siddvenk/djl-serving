@@ -75,6 +75,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     private static final String X_NEXT_TOKEN = "x-next-token";
     private static final String X_MAX_ITEMS = "x-max-items";
     private static final String X_CUSTOM_ATTRIBUTES = "X-Amzn-SageMaker-Custom-Attributes";
+    private long startTime;
+    private long endTime;
 
     private RequestParser requestParser;
     private int chunkReadTime;
@@ -91,6 +93,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
     /** {@inheritDoc} */
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
+        startTime = System.nanoTime();
         if (super.acceptInboundMessage(msg)) {
             FullHttpRequest req = (FullHttpRequest) msg;
             String uri = req.uri();
@@ -434,6 +437,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                             resp.content().writeBytes(buf);
                         }
                         NettyUtils.sendHttpResponse(ctx, resp, true);
+                        endTime = System.nanoTime();
+                        logger.info("Non streaming inference time is {}", endTime-startTime);
                         return;
                     }
                     if (first) {
@@ -456,6 +461,8 @@ public class InferenceRequestHandler extends HttpRequestHandler {
                 ctx.disconnect();
                 ctx.newFailedFuture(e);
             }
+            endTime = System.nanoTime();
+            logger.info("streaming inference time is {}", endTime-startTime);
             return;
         }
         if (data instanceof PublisherBytesSupplier) {
