@@ -200,6 +200,7 @@ public class InferenceRequestHandler extends HttpRequestHandler {
         Input input = requestParser.parseRequest(req, decoder);
         String requestId = NettyUtils.getRequestId(ctx.channel());
         input.addProperty("requestId", requestId);
+        logger.info("Received new request with id {}", requestId);
         if (modelName == null) {
             modelName = NettyUtils.getParameter(decoder, "model_name", null);
         }

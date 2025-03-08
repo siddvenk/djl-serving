@@ -71,8 +71,9 @@ class Connection {
     private Channel channel;
     private RequestHandler requestHandler;
 
-    Connection(PyEnv pyEnv, int basePort, int rank, String hostname) {
-        requestHandler = new RequestHandler();
+    Connection(
+            PyEnv pyEnv, int basePort, int rank, String hostname, ContinuousBatch continuousBatch) {
+        requestHandler = new RequestHandler(continuousBatch);
         port = 19000 + basePort;
         socketAddress = getSocketAddress(pyEnv.isMpiMode(), rank, hostname);
     }
@@ -388,6 +389,10 @@ class Connection {
         }
     }
 
+    void setContinuousBatcher(ContinuousBatch continuousBatcher) {
+        this.requestHandler.setContinuousBatching(continuousBatcher);
+    }
+
     private static String getSocketPath(int port) {
         return System.getProperty("java.io.tmpdir") + "/djl_sock." + port;
     }
@@ -434,11 +439,20 @@ class Connection {
     private static final class RequestHandler extends SimpleChannelInboundHandler<Output> {
 
         private CompletableFuture<Output> future;
+        private ContinuousBatch continuousBatch;
+
+        RequestHandler(ContinuousBatch continuousBatch) {
+            super();
+            this.continuousBatch = continuousBatch;
+        }
 
         /** {@inheritDoc} */
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, Output msg) {
             future.complete(msg);
+            if (continuousBatch != null) {
+                continuousBatch.addOutput(msg);
+            }
         }
 
         /** {@inheritDoc} */
@@ -465,6 +479,13 @@ class Connection {
          */
         public void setResponseFuture(CompletableFuture<Output> future) {
             this.future = future;
+        }
+
+        /**
+         * Sets the Continuous batcher. It gets invoked upon receiving response from python server.
+         */
+        public void setContinuousBatching(ContinuousBatch continuousBatching) {
+            this.continuousBatch = continuousBatching;
         }
     }
 
