@@ -182,7 +182,7 @@ class Output(object):
         msg += struct.pack('>h', len(self.properties))
         for k, v in self.properties.items():
             self.write_utf8(msg, k)
-            self.write_utf8(msg, v)
+            self.write_utf8(msg, str(v))
 
         if self.stream_content is None:
             size = self.content.size()

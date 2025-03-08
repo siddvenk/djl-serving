@@ -64,6 +64,7 @@ public class PyEnv {
 
     private boolean enableVenv;
     private boolean venvCreated;
+    private boolean continuousBatching;
 
     /**
      * Constructs a new {@code PyEnv} instance.
@@ -301,6 +302,14 @@ public class PyEnv {
 
     boolean isMpiMode() {
         return mpiMode;
+    }
+
+    void setContinuousBatching(boolean continuousBatching) {
+        this.continuousBatching = continuousBatching;
+    }
+
+    boolean isContinuousBatching() {
+        return continuousBatching;
     }
 
     /**

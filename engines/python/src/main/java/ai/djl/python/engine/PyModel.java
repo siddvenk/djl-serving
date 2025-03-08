@@ -148,6 +148,9 @@ public class PyModel extends BaseModel {
                     case "mpi_mode":
                         pyEnv.setMpiMode(Boolean.parseBoolean(value));
                         break;
+                    case "continuous_batching":
+                        pyEnv.setContinuousBatching(Boolean.parseBoolean(value));
+                        break;
                     default:
                         break;
                 }

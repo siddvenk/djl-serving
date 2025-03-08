@@ -29,6 +29,10 @@ class ModelService(object):
         inputs.properties["model_dir"] = self.model_dir
         return getattr(self.module, function_name)(inputs)
 
+    async def invoke_handler_async(self, function_name, inputs):
+        inputs.properties["model_dir"] = self.model_dir
+        return await getattr(self.module, function_name)(inputs)
+
 
 def load_model_service(model_dir, entry_point, device_id):
     manifest_file = os.path.join(model_dir, "MAR-INF/MANIFEST.json")
