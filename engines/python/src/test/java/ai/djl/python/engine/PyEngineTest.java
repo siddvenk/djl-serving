@@ -35,6 +35,8 @@ import ai.djl.util.RandomUtils;
 import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -53,6 +55,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 public class PyEngineTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(PyEngineTest.class);
 
     @BeforeClass
     public void setUp() {
@@ -463,7 +467,7 @@ public class PyEngineTest {
             ChunkedBytesSupplier cbs = (ChunkedBytesSupplier) output.getData();
             Assert.assertNull(cbs.pollChunk());
             String ret = cbs.getAsString();
-            System.out.println(ret);
+            logger.info(ret);
             Assert.assertTrue(ret.startsWith(" token_request4_"));
         }
     }
@@ -501,7 +505,7 @@ public class PyEngineTest {
     }
 
     @Test
-    public void testRestartProcess() throws IOException, ModelException, InterruptedException {
+    public void testRestartProcessDefaultThreshold() throws IOException, ModelException {
         Criteria<Input, Output> criteria =
                 Criteria.builder()
                         .setTypes(Input.class, Output.class)
@@ -511,25 +515,104 @@ public class PyEngineTest {
         try (ZooModel<Input, Output> model = criteria.loadModel();
                 Predictor<Input, Output> predictor = model.newPredictor()) {
             Assert.assertNull(model.getProperty("failed"));
-            Input input = new Input();
-            input.add("exit", "true");
-            Assert.assertThrows(EngineException.class, () -> predictor.predict(input));
-            Assert.assertEquals(model.getProperty("failed"), "1");
-
-            Input input2 = new Input();
-            input2.add("data", "input");
+            Input normalInput = new Input();
+            // regular input should succeed
+            normalInput.add("data", "input");
             Output output = null;
-            for (int i = 0; i < 5; ++i) {
-                Thread.sleep(1000);
-                try {
-                    output = predictor.predict(input2);
-                    break;
-                } catch (TranslateException ignore) {
-                    // ignore
-                }
+            try {
+                output = predictor.predict(normalInput);
+            } catch (TranslateException ignored) {
+                // ignore
             }
             Assert.assertNotNull(output);
             Assert.assertEquals(output.getCode(), 200);
+
+            // trigger a crash, model will be unrecoverable
+            Input errorInput = new Input();
+            errorInput.add("exit", "true");
+            Assert.assertThrows(EngineException.class, () -> predictor.predict(errorInput));
+            Assert.assertEquals(model.getProperty("failed"), "1");
+        }
+    }
+
+    @Test
+    public void testRestartProcessFiniteThreshold()
+            throws IOException, ModelException, InterruptedException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Assert.assertNull(model.getProperty("failed"));
+            model.setProperty("retry_threshold", "1");
+
+            // trigger a crash, model will restart
+            Input errorInput = new Input();
+            errorInput.add("exit", "true");
+            Assert.assertThrows(EngineException.class, () -> predictor.predict(errorInput));
+            Assert.assertNull(model.getProperty("failed"));
+
+            // model should restart and eventually succeed
+            Input normalInput = new Input();
+            normalInput.add("data", "input");
+            Output output = null;
+            for (int i = 0; i < 5; ++i) {
+                try {
+                    output = predictor.predict(normalInput);
+                    break;
+                } catch (TranslateException ignore) {
+                    logger.info("Worker is still restarting... attempt {}", i + 1);
+                }
+                Thread.sleep(1000);
+            }
+            Assert.assertNotNull(output);
+            Assert.assertEquals(output.getCode(), 200);
+
+            // trigger a crash, model will be unrecoverable
+            Assert.assertThrows(EngineException.class, () -> predictor.predict(errorInput));
+            Assert.assertEquals(model.getProperty("failed"), "1");
+            Assert.assertThrows(EngineException.class, () -> predictor.predict(normalInput));
+        }
+    }
+
+    @Test
+    public void testRestartProcessUnlimitedThreshold()
+            throws IOException, ModelException, InterruptedException {
+        Criteria<Input, Output> criteria =
+                Criteria.builder()
+                        .setTypes(Input.class, Output.class)
+                        .optModelPath(Paths.get("src/test/resources/echo"))
+                        .optEngine("Python")
+                        .build();
+        try (ZooModel<Input, Output> model = criteria.loadModel();
+                Predictor<Input, Output> predictor = model.newPredictor()) {
+            Assert.assertNull(model.getProperty("failed"));
+            model.setProperty("retry_threshold", "-1");
+            Input errorInput = new Input();
+            errorInput.add("exit", "true");
+            Input normalInput = new Input();
+            normalInput.add("data", "input");
+            for (int i = 0; i < 5; ++i) {
+                Output output = null;
+                for (int j = 0; j < 5; ++j) {
+                    try {
+                        output = predictor.predict(normalInput);
+                        break;
+                    } catch (TranslateException ignore) {
+                        logger.info("Worker is still restarting... attempt {}", j + 1);
+                        // ignore
+                    }
+                    Thread.sleep(1000);
+                }
+                Assert.assertNotNull(output);
+                Assert.assertEquals(output.getCode(), 200);
+                logger.info("Triggering crash number {}", i);
+                Assert.assertThrows(EngineException.class, () -> predictor.predict(errorInput));
+            }
+            Assert.assertNull(model.getProperty("failed"));
         }
     }
 }

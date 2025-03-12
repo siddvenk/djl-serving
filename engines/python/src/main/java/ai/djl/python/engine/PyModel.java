@@ -363,7 +363,7 @@ public class PyModel extends BaseModel {
 
     private void shutdown() {
         for (PyProcess process : workerQueue) {
-            process.stopPythonProcess(false);
+            process.stopPythonProcess();
         }
         workerQueue.clear();
         if (pyEnv.isEnableVenv()) {

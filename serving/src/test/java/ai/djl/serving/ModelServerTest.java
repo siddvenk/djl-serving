@@ -506,6 +506,79 @@ public class ModelServerTest {
         Assert.assertThrows(ServerStartupException.class, server::start);
     }
 
+    @Test
+    public void testPythonModelRestarts()
+            throws InterruptedException,
+                    IOException,
+                    ServerStartupException,
+                    GeneralSecurityException,
+                    ParseException {
+        Path modelStore = Paths.get("build/models");
+        Utils.deleteQuietly(modelStore);
+        Files.createDirectories(modelStore);
+        ModelServer server = initTestServer("src/test/resources/emptyStore.config.properties");
+        try {
+            assertTrue(server.isRunning());
+            // register the python model
+            Channel channel = connect(Connector.ConnectorType.BOTH);
+            String url =
+                    URLEncoder.encode(
+                            "file:src/test/resources/echo_python", StandardCharsets.UTF_8);
+            url = "/models?model_name=echo_python&url=" + url;
+            request(channel, HttpMethod.POST, url);
+            assertHttpOk();
+
+            // make happy path request
+            DefaultFullHttpRequest req =
+                    new DefaultFullHttpRequest(
+                            HttpVersion.HTTP_1_1, HttpMethod.POST, "/predictions/echo_python");
+            Map<String, Object> data = new ConcurrentHashMap<>();
+            data.put("inputs", "hello there");
+            req.content().writeCharSequence(JsonUtils.GSON.toJson(data), StandardCharsets.UTF_8);
+            HttpUtil.setContentLength(req, req.content().readableBytes());
+            req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+            request(channel, req);
+            assertHttpOk();
+
+            // trigger crash
+            req =
+                    new DefaultFullHttpRequest(
+                            HttpVersion.HTTP_1_1,
+                            HttpMethod.POST,
+                            "/predictions/echo_python?exit=true");
+            req.content().writeCharSequence(JsonUtils.GSON.toJson(data), StandardCharsets.UTF_8);
+            HttpUtil.setContentLength(req, req.content().readableBytes());
+            req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+            request(channel, req);
+            assertHttpCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
+
+            // check status
+            Channel managementChannel = connect(Connector.ConnectorType.BOTH);
+
+            request(managementChannel, HttpMethod.GET, "/models/echo_python");
+            Type type = new TypeToken<DescribeWorkflowResponse[]>() {
+            }.getType();
+            DescribeWorkflowResponse[] resp = JsonUtils.GSON.fromJson(result, type);
+            DescribeWorkflowResponse wf = resp[0];
+            assertEquals(wf.getWorkflowName(), "echo_python");
+            assertEquals(wf.getModels().get(0).getStatus(), "Healthy");
+            assertEquals(wf.getModels().get(0).getWorkGroups().get(0).getWorkers().get(0).getStatus(), "UNLOADING");
+
+            req =
+                    new DefaultFullHttpRequest(
+                            HttpVersion.HTTP_1_1, HttpMethod.POST, "/predictions/echo_python");
+            req.content().writeCharSequence(JsonUtils.GSON.toJson(data), StandardCharsets.UTF_8);
+            HttpUtil.setContentLength(req, req.content().readableBytes());
+            req.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+            request(channel, req);
+            assertHttpOk();
+
+            System.out.println(result);
+        } finally {
+            server.stop();
+        }
+    }
+
     private ModelServer initTestServer(String configFile)
             throws ParseException,
                     ServerStartupException,

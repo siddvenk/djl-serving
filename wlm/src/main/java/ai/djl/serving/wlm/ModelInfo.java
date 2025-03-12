@@ -392,22 +392,15 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         for (Model m : getModels().values()) {
             int failures = m.intProperty("failed", 0);
             if (failures > 0) {
-                int def = Integer.parseInt(Utils.getenv("SERVING_RETRY_THRESHOLD", "0"));
-                int threshold = m.intProperty("retry_threshold", def);
-                if (failures > threshold) {
-                    logger.info(
-                            "{}: exceed retry threshold: {}, mark model as failed.",
-                            uid,
-                            threshold);
-                    boolean isFailFastEnabled =
-                            Boolean.parseBoolean(Utils.getEnvOrSystemProperty("SERVING_FAIL_FAST"));
-                    if (isFailFastEnabled) {
-                        // SIGKILL (9 + 128)
-                        System.exit(137); // NOPMD
-                    }
-
-                    return Status.FAILED;
+                logger.info("{}: exceed retry threshold, mark model as failed.", uid);
+                boolean isFailFastEnabled =
+                        Boolean.parseBoolean(Utils.getEnvOrSystemProperty("SERVING_FAIL_FAST"));
+                if (isFailFastEnabled) {
+                    logger.info("SERVING_FAIL_FAST is enabled, triggering SIGKILL");
+                    // SIGKILL (9 + 128)
+                    System.exit(137); // NOPMD
                 }
+                return Status.FAILED;
             }
         }
         return status;

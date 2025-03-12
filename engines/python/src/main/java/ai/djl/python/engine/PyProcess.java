@@ -140,13 +140,14 @@ class PyProcess {
 
             return output;
         } catch (Throwable e) { // use Throwable to workaround spotbug false alarm
-            logger.debug("predict[init={}] exception: {}", initialLoad, e.getClass().getName());
-            stopPythonProcess(!initialLoad);
-            if (!initialLoad) {
-                logger.info("Restart python process ...");
+            logger.info("predict[init={}] exception: {}", initialLoad, e.getClass().getName());
+            stopPythonProcess();
+            if (!initialLoad && modelHasRetriesLeft()) {
+                restartCount.getAndIncrement();
+                logger.info("Restart python process. Attempt number [{}]", restartCount.get());
                 restartFuture = CompletableFuture.runAsync(this::startPythonProcess);
             } else {
-                modelUnrecoverable = true;
+                markModelAsFailed();
             }
             if (e instanceof EngineException) {
                 throw (EngineException) e;
@@ -208,20 +209,14 @@ class PyProcess {
             throw new EngineException("Failed to loaded model.", e);
         } finally {
             if (!started) {
-                stopPythonProcess(true);
+                stopPythonProcess();
+                markModelAsFailed();
             }
         }
     }
 
-    synchronized void stopPythonProcess(boolean error) {
-        restartCount.getAndIncrement();
-        logger.info("Stop process: {}:{}, failure={}", workerId, pid, error);
-        if (error) {
-            int failures = model.intProperty("failed", 0);
-            model.setProperty("failed", String.valueOf(failures + 1));
-            logger.info("Failure count: {}", failures);
-        }
-
+    synchronized void stopPythonProcess() {
+        logger.info("Stop process: {}:{}", workerId, pid);
         if (restartFuture != null) {
             try {
                 if (!restartFuture.isDone()) {
@@ -265,6 +260,23 @@ class PyProcess {
 
     boolean isModelUnrecoverable() {
         return modelUnrecoverable;
+    }
+
+    boolean modelHasRetriesLeft() {
+        int defaultRetryThreshold =
+                Integer.parseInt(Utils.getEnvOrSystemProperty("SERVING_RETRY_THRESHOLD", "0"));
+        int retryThreshold = model.intProperty("retry_threshold", defaultRetryThreshold);
+        if (retryThreshold == -1) {
+            logger.info("retry_threshold has been set to -1 indicating unlimited retry attempts");
+            return true;
+        }
+        return restartCount.get() < retryThreshold;
+    }
+
+    void markModelAsFailed() {
+        logger.info("model has exhausted all retries, or failed to start. marking as failed");
+        modelUnrecoverable = true;
+        model.setProperty("failed", "1");
     }
 
     private static String[] getHosts(int clusterSize) {
