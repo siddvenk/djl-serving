@@ -49,6 +49,7 @@ async def wrapped_vllm_stream_generator(
             "last": last,
         }
         output.add(Output.binary_encode(chunk_response))
+        logger.info(f"returning stream content output with the following properties {output.properties}")
         yield output
 
 
@@ -153,6 +154,7 @@ class VLLMHandler:
             self,
             inputs: Input) -> Union[Output, AsyncGenerator[Output, None]]:
         properties = inputs.get_properties()
+        logger.info(f"received input from Java with the following properties: {properties}")
         try:
             request, invoke_call = self.preprocess_request(inputs)
         except Exception as e:
@@ -176,13 +178,14 @@ class VLLMHandler:
         for k, v in inputs.get_properties().items():
             output.add_property(k, str(v))
         output.add(Output.binary_encode(response_dict))
+        logger.info(f"returning output from python with the following properties {output.properties}")
         return output
 
 
 service = VLLMHandler()
 
 
-async def handle(inputs: Input) -> Optional[Output]:
+async def handle(inputs: Input) -> Optional[Union[Output, AsyncGenerator[Output, None]]]:
     if not service.initialized:
         await service.initialize(inputs.get_properties())
         logging.info("vllm service initialized")
@@ -190,4 +193,5 @@ async def handle(inputs: Input) -> Optional[Output]:
         logging.info("empty inference request")
         return None
 
-    return await service.inference(inputs)
+    outputs =  await service.inference(inputs)
+    logger.info(f"type of outputs from vllm service handler is {type(outputs)}")

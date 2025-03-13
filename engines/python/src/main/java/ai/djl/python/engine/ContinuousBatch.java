@@ -66,6 +66,7 @@ class ContinuousBatch {
                         + " {}",
                 request.getRequestId(),
                 requestTrackingId);
+        logger.info("Sending input to Python with the following properties: {}", input.getProperties());
         process.sendRequest(input);
         return request.output;
     }
@@ -79,6 +80,7 @@ class ContinuousBatch {
         PairList<String, BytesSupplier> content = output.getContent();
         assert content.size() == 1;
         Map<String, String> prop = output.getProperties();
+        logger.info("Received output from Python with the following properties: {}", prop);
         byte[] responseContent = content.get(0).getValue().getAsBytes();
         String requestTrackingId = prop.get(REQUEST_TRACKING_IDENTIFIER);
         Request request = activeRequests.get(requestTrackingId);

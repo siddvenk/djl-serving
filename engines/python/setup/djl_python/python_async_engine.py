@@ -56,6 +56,7 @@ class PythonAsyncEngine(PythonSyncEngine):
         try:
             outputs = await self.service.invoke_handler_async(
                 function_name, inputs)
+            logging.info(f"type of outputs engine.invoke_handler_async() is {type(outputs)}")
             if outputs is None:
                 outputs = Output(code=204, message="No content")
             elif not isinstance(outputs, Output):
@@ -79,7 +80,7 @@ class PythonAsyncEngine(PythonSyncEngine):
             future = asyncio.run_coroutine_threadsafe(self.output_queue.get(),
                                                       self.loop)
             logging.info("waiting for new inference response")
-            output: Output = future.result()
+            output = future.result()
             if isinstance(output, AsyncGenerator):
                 logging.info("sending streaming response back")
                 asyncio.run_coroutine_threadsafe(
