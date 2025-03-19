@@ -75,6 +75,7 @@ class RollingBatch implements Runnable {
     private Dimension dimension;
 
     RollingBatch(PyProcess process, Model model, int timeout) {
+        logger.info("creating new rolling batch");
         this.process = process;
         this.timeout = timeout;
         this.dimension = new Dimension("Model", model.getProperty("metric_dimension", "model"));
@@ -100,6 +101,7 @@ class RollingBatch implements Runnable {
     /** {@inheritDoc} */
     @Override
     public void run() {
+        logger.info("starting rolling batch");
         currentThread = Thread.currentThread();
         while (!stop) {
             int size;
@@ -220,6 +222,7 @@ class RollingBatch implements Runnable {
                 lock.unlock();
             }
         }
+        logger.info("stopping rolling batch");
     }
 
     public Output addInput(Input input, int timeout) throws TranslateException {
@@ -256,6 +259,7 @@ class RollingBatch implements Runnable {
     }
 
     public void shutdown() {
+        logger.info("shutting down rolling batch");
         this.stop = true;
         threadPool.shutdown();
         currentThread.interrupt();
