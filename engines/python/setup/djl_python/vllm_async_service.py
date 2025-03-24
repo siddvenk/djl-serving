@@ -166,7 +166,13 @@ class VLLMHandler:
             output = Output()
             for k, v in properties.items():
                 output.add_property(k, str(v))
-            output.error(str(e), 424, "Input Parsing failed")
+            error = {
+                "data": "",
+                "last": True,
+                "code": 424,
+                "error": f"Input parsing failed. Details {e}"
+            }
+            output.add(Output.binary_encode(error))
             return output
 
         response = await invoke_call(request)
