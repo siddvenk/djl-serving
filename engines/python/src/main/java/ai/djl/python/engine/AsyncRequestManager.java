@@ -75,12 +75,12 @@ class AsyncRequestManager {
         // This check is here to handle the empty inference request used to load the model.
         // Refactor to make this check not needed, or add validation to ensure it only occurs on
         // the initial model load.
-        if (!this.process.isReady()) {
-            logger.info("process is not ready");
+        logger.info("Received output {}", output);
+        if (output.getContent().isEmpty()) {
+            logger.info("internal request for loading the model or lora");
             return;
         }
         PairList<String, BytesSupplier> content = output.getContent();
-        assert content.size() == 1;
         Map<String, String> prop = output.getProperties();
         byte[] responseContent = content.get(0).getValue().getAsBytes();
         String requestTrackingId = prop.get(REQUEST_TRACKING_ID);

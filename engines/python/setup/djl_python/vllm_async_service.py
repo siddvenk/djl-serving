@@ -19,6 +19,7 @@ from vllm.entrypoints.openai.protocol import (
     ChatCompletionRequest,
     CompletionRequest,
     ErrorResponse,
+    LoadLordapterRequest,
 )
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 from vllm.entrypoints.openai.serving_completion import OpenAIServingCompletion
@@ -186,6 +187,34 @@ class VLLMHandler:
 
 
 service = VLLMHandler()
+
+
+async def register_adapter(inputs: Input):
+    logger.info("invoking vllm_async_service register adapter")
+    output = Output()
+    for k, v in inputs.get_properties():
+        output.add_property(k, v)
+    adapter_name = inputs.get_property("name")
+    adapter_alias = inputs.get_property("alias") or adapter_name
+    adapter_path = inputs.get_property("src")
+
+    load_lora_request = LoadLoraAdapterRequest(
+        lora_name=adapter_alias,
+        lora_path=adapter_path,
+    )
+    response = await service.model_registry.load_lora_adapter(
+        load_lora_request,
+        service.model_name,
+    )
+    if isinstance(response, ErrorResponse):
+        code = response.code
+        message = response.message
+        logger.info(f"error loading adapter via vllm {response}")
+        return output.error("register adapter failure",
+                            code=code,
+                            message=message)
+    logger.info(f"successful registration of lora adapter {response}")
+    return output.set_message(response)
 
 
 async def handle(inputs: Input, cl_socket) -> Optional[Output]:
