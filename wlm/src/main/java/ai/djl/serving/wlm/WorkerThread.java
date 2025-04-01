@@ -120,6 +120,7 @@ public final class WorkerThread<I, O> implements Runnable {
     }
 
     private void runAllConfigJobs() throws TranslateException {
+        logger.info("Running all adapter config jobs");
         while (!threadConfig.getConfigJobs().isEmpty()) {
             // Run base worker pool configurations if present
             runConfigJob(threadConfig.getConfigJobs().pop());
@@ -127,10 +128,12 @@ public final class WorkerThread<I, O> implements Runnable {
     }
 
     private void runConfigJob(Job<I, O> configJob) throws TranslateException {
+        logger.info("Running config job {}", configJob);
         runJobs(Collections.singletonList(configJob));
 
         if (configJob.getOutput() instanceof Output) {
             Output output = (Output) configJob.getOutput();
+            logger.info("Received output from adapter config job with message {}", output.getMessage());
             if (output.getCode() >= 300) {
                 throw new EngineException("Failed to register adapter: " + output.getMessage());
             }

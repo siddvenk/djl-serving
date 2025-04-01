@@ -1247,6 +1247,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
 
             synchronized (this) {
                 for (Map.Entry<String, Adapter<I, O>> adapter : adapters.entrySet()) {
+                    logger.info("Submitting new adapter config job for adapter {}", adapter.getKey());
                     configJobs.add(adapter.getValue().registerJob(ModelInfo.this).getJob());
                 }
             }
