@@ -272,7 +272,9 @@ lmi_dist_model_spec = {
         "tokenizer": "TheBloke/Llama-2-13B-fp16",
         "parameters": {
             "decoder_input_details": True
-        }
+        },
+        # decoder input details not supported in streaming
+        "stream": [False],
     },
     "mistral-7b": {
         "batch_size": [1, 4],
@@ -295,7 +297,9 @@ lmi_dist_model_spec = {
         "tokenizer": "TheBloke/Llama-2-13B-fp16",
         "parameters": {
             "decoder_input_details": True
-        }
+        },
+        # decoder input details not supported in streaming
+        "stream": [False],
     },
     "mistral-7b-128k-awq": {
         "batch_size": [1, 4],
@@ -449,7 +453,9 @@ vllm_model_spec = {
         "tokenizer": "amazon/MegaBeam-Mistral-7B-300k",
         "parameters": {
             "decoder_input_details": True
-        }
+        },
+        # decoder input details not supported in streaming
+        "stream": [False],
     },
     "phi-2": {
         "batch_size": [1, 4],
@@ -477,7 +483,9 @@ vllm_model_spec = {
         "tokenizer": "Qwen/Qwen-7B",
         "parameters": {
             "decoder_input_details": True
-        }
+        },
+        # decoder input details not supported in streaming
+        "stream": [False],
     },
     "llama3-8b-chunked-prefill": {
         "batch_size": [1, 4],
