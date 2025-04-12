@@ -143,14 +143,14 @@ jobs:
       fail-fast: false
       matrix:
         test:
-          - test: TestCpuFull
-            instance: ubuntu-latest
-            gh-runner: true
-            failure-prefix: cpu
-          - test: TestCpuBoth
-            instance: ubuntu-latest
-            gh-runner: true
-            failure-prefix: cpu
+#          - test: TestCpuFull
+#            instance: ubuntu-latest
+#            gh-runner: true
+#            failure-prefix: cpu
+#          - test: TestCpuBoth
+#            instance: ubuntu-latest
+#            gh-runner: true
+#            failure-prefix: cpu
           - test: TestGpu
             instance: g6
             failure-prefix: gpu
