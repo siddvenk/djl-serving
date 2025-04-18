@@ -1,0 +1,3 @@
+tensorrt_llm==0.20.0rc0
+uvloop
+ninja
