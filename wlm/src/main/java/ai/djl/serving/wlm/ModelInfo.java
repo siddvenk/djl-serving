@@ -553,15 +553,7 @@ public final class ModelInfo<I, O> extends WorkerPoolConfig<I, O> {
         long duration = (System.nanoTime() - begin) / 1000;
         Metric metric = new Metric("DownloadModel", duration, Unit.MICROSECONDS, dimension);
         MODEL_METRIC.info("{}", metric);
-        if (LmiUtils.needConvertTrtLLM(this)) {
-            eventManager.onModelConverting(this, "trtllm");
-            begin = System.nanoTime();
-            LmiUtils.convertTrtLLM(this);
-            duration = (System.nanoTime() - begin) / 1000;
-            metric = new Metric("ConvertTrtllm", duration, Unit.MICROSECONDS, dimension);
-            MODEL_METRIC.info("{}", metric);
-            eventManager.onModelConverted(this, "trtllm");
-        } else if ("OnnxRuntime".equals(getEngineName()) && LmiUtils.needConvertOnnx(this)) {
+        if ("OnnxRuntime".equals(getEngineName()) && LmiUtils.needConvertOnnx(this)) {
             eventManager.onModelConverting(this, "onnx");
             begin = System.nanoTime();
             LmiUtils.convertOnnxModel(this);

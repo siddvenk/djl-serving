@@ -12,7 +12,6 @@
  */
 package ai.djl.serving.wlm;
 
-import ai.djl.Device;
 import ai.djl.ModelException;
 import ai.djl.engine.Engine;
 import ai.djl.engine.EngineException;
@@ -97,59 +96,6 @@ public final class LmiUtils {
                 modelConfig.getModelType());
     }
 
-    static boolean isTrtLlmRollingBatch(Properties properties) {
-        String rollingBatch = properties.getProperty("option.rolling_batch");
-        if ("trtllm".equals(rollingBatch)) {
-            return true;
-        }
-        if (rollingBatch == null || "auto".equals(rollingBatch)) {
-            // FIXME: find a better way to set default rolling batch for trtllm
-            String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
-            return features != null && features.contains("trtllm");
-        }
-        return false;
-    }
-
-    static boolean needConvertTrtLLM(ModelInfo<?, ?> info) {
-        Properties properties = info.getProperties();
-        return isTrtLlmRollingBatch(properties);
-    }
-
-    static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
-        Path trtRepo;
-        String modelId = null;
-        if (info.downloadDir != null) {
-            trtRepo = info.downloadDir;
-        } else {
-            trtRepo = info.modelDir;
-            modelId = info.prop.getProperty("option.model_id");
-            if (modelId != null && Files.isDirectory(Paths.get(modelId))) {
-                trtRepo = Paths.get(modelId);
-            }
-        }
-
-        if (modelId == null) {
-            modelId = trtRepo.toString();
-        }
-
-        String tpDegree = info.prop.getProperty("option.tensor_parallel_degree");
-        if (tpDegree == null) {
-            tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
-        }
-        if ("max".equals(tpDegree)) {
-            tpDegree = String.valueOf(CudaUtils.getGpuCount());
-        }
-
-        String ppDegree = info.prop.getProperty("option.pipeline_parallel_degree");
-        if (ppDegree == null) {
-            ppDegree = Utils.getenv("PIPELINE_PARALLEL_DEGREE", "1");
-        }
-
-        info.prop.put("option.rolling_batch", "trtllm");
-        if (!isValidTrtLlmModelRepo(trtRepo)) {
-            info.downloadDir = buildTrtLlmArtifacts(info.prop, modelId, tpDegree, ppDegree);
-        }
-    }
 
     static boolean needConvertOnnx(ModelInfo<?, ?> info) {
         String prefix = info.prop.getProperty("option.modelName", info.modelDir.toFile().getName());
@@ -388,102 +334,6 @@ public final class LmiUtils {
         } catch (IOException | JsonSyntaxException e) {
             throw new ModelNotFoundException("Invalid huggingface model id: " + modelId, e);
         }
-    }
-
-    private static Path buildTrtLlmArtifacts(
-            Properties prop, String modelId, String tpDegree, String ppDegree) throws IOException {
-        logger.info("Converting model to TensorRT-LLM artifacts");
-        String hash = Utils.hash(modelId + tpDegree);
-        String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
-        Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
-        Path trtLlmRepoDir = parent.resolve("trtllm").resolve(hash);
-        if (Files.exists(trtLlmRepoDir)) {
-            logger.info("TensorRT-LLM artifacts already converted: {}", trtLlmRepoDir);
-            return trtLlmRepoDir;
-        }
-
-        Path tempDir = Files.createTempDirectory("trtllm");
-        logger.info("Writing temp properties to {}", tempDir.toAbsolutePath());
-        try (OutputStream os = Files.newOutputStream(tempDir.resolve("serving.properties"))) {
-            prop.store(os, "");
-        }
-
-        List<String> cmd =
-                Arrays.asList(
-                        "python",
-                        "/opt/djl/partition/trt_llm_partition.py",
-                        "--properties_dir",
-                        tempDir.toAbsolutePath().toString(),
-                        "--trt_llm_model_repo",
-                        trtLlmRepoDir.toString(),
-                        "--tensor_parallel_degree",
-                        tpDegree,
-                        "--pipeline_parallel_degree",
-                        ppDegree,
-                        "--model_path",
-                        modelId);
-        boolean success = false;
-        try {
-            logger.info("Converting model to TensorRT-LLM artifacts: {}", (Object) cmd);
-            exec(cmd);
-            success = true;
-            logger.info("TensorRT-LLM artifacts built successfully");
-            return trtLlmRepoDir;
-        } catch (InterruptedException e) {
-            throw new IOException("Failed to build TensorRT-LLM artifacts", e);
-        } finally {
-            if (!success) {
-                Utils.deleteQuietly(trtLlmRepoDir);
-            }
-        }
-    }
-
-    // TODO: migrate this to CUDAUtils in next version
-    static String getAWSGpuMachineType() {
-        String computeCapability = CudaUtils.getComputeCapability(0);
-        // Get gpu memory in GB sizes
-        double totalMemory =
-                CudaUtils.getGpuMemory(Device.gpu()).getMax() / 1024.0 / 1024.0 / 1024.0;
-        if ("7.5".equals(computeCapability)) {
-            return "g4";
-        } else if ("8.0".equals(computeCapability)) {
-            if (totalMemory > 45.0) {
-                return "p4de";
-            }
-            return "p4d";
-        } else if ("8.6".equals(computeCapability)) {
-            return "g5";
-        } else if ("8.9".equals(computeCapability)) {
-            if (totalMemory > 25.0) {
-                return "g6e";
-            }
-            return "g6";
-        } else if ("9.0".equals(computeCapability)) {
-            return "p5";
-        } else {
-            logger.warn("Could not identify GPU arch {}", computeCapability);
-            return null;
-        }
-    }
-
-    static boolean isValidTrtLlmModelRepo(Path modelPath) throws IOException {
-        // TODO: match model name
-        AtomicBoolean isValid = new AtomicBoolean();
-        try (Stream<Path> walk = Files.list(modelPath)) {
-            walk.filter(Files::isDirectory)
-                    .forEach(
-                            p -> {
-                                Path confFile = p.resolve("config.pbtxt");
-                                // TODO: add stricter check for tokenizer
-                                Path tokenizer = p.resolve("tokenizer_config.json");
-                                if (Files.isRegularFile(confFile)
-                                        && Files.isRegularFile(tokenizer)) {
-                                    logger.info("Found triton model: {}", p);
-                                    isValid.set(true);
-                                }
-                            });
-        }
-        return isValid.get();
     }
 
     /**
