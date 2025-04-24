@@ -20,7 +20,6 @@ import ai.djl.util.JsonUtils;
 import ai.djl.util.Utils;
 import ai.djl.util.cuda.CudaUtils;
 
-import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
 
@@ -35,7 +34,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -93,45 +91,6 @@ public final class LmiUtils {
                 prop.getProperty("option.rolling_batch"),
                 prop.getProperty("option.tensor_parallel_degree"),
                 modelConfig.getModelType());
-    }
-
-    static boolean needConvertTrtLLM(ModelInfo<?, ?> info) {
-        String features = Utils.getEnvOrSystemProperty("SERVING_FEATURES");
-        return features != null && features.contains("trtllm");
-    }
-
-    static void convertTrtLLM(ModelInfo<?, ?> info) throws IOException {
-        Path trtRepo;
-        String modelId = null;
-        if (info.downloadDir != null) {
-            trtRepo = info.downloadDir;
-        } else {
-            trtRepo = info.modelDir;
-            modelId = info.prop.getProperty("option.model_id");
-            if (modelId != null && Files.isDirectory(Paths.get(modelId))) {
-                trtRepo = Paths.get(modelId);
-            }
-        }
-
-        if (modelId == null) {
-            modelId = trtRepo.toString();
-        }
-
-        String tpDegree = info.prop.getProperty("option.tensor_parallel_degree");
-        if (tpDegree == null) {
-            tpDegree = Utils.getenv("TENSOR_PARALLEL_DEGREE", "max");
-        }
-        if ("max".equals(tpDegree)) {
-            tpDegree = String.valueOf(CudaUtils.getGpuCount());
-        }
-
-        String ppDegree = info.prop.getProperty("option.pipeline_parallel_degree");
-        if (ppDegree == null) {
-            ppDegree = Utils.getenv("PIPELINE_PARALLEL_DEGREE", "1");
-        }
-        if (!isValidTrtLlmModelRepo(trtRepo)) {
-            info.downloadDir = buildTrtLlmArtifacts(info.prop, modelId, tpDegree, ppDegree);
-        }
     }
 
     static boolean needConvertOnnx(ModelInfo<?, ?> info) {
@@ -371,64 +330,6 @@ public final class LmiUtils {
         } catch (IOException | JsonSyntaxException e) {
             throw new ModelNotFoundException("Invalid huggingface model id: " + modelId, e);
         }
-    }
-
-    private static Path buildTrtLlmArtifacts(
-            Properties prop, String modelId, String tpDegree, String ppDegree) throws IOException {
-        logger.info("Converting model to TensorRT-LLM artifacts");
-        String hash = Utils.hash(modelId + tpDegree + ppDegree);
-        String download = Utils.getenv("SERVING_DOWNLOAD_DIR", null);
-        Path parent = download == null ? Utils.getCacheDir() : Paths.get(download);
-        Path trtLlmRepoDir = parent.resolve("trtllm").resolve(hash);
-        if (Files.exists(trtLlmRepoDir)) {
-            logger.info("TensorRT-LLM artifacts already converted: {}", trtLlmRepoDir);
-            return trtLlmRepoDir;
-        }
-
-        Path tempDir = Files.createTempDirectory("trtllm");
-        logger.info("Writing temp properties to {}", tempDir.toAbsolutePath());
-        try (OutputStream os = Files.newOutputStream(tempDir.resolve("serving.properties"))) {
-            prop.store(os, "");
-        }
-
-        List<String> cmd =
-                Arrays.asList(
-                        "python",
-                        "/opt/djl/partition/trt_llm_partition.py",
-                        "--properties_dir",
-                        tempDir.toAbsolutePath().toString(),
-                        "--trt_llm_model_repo",
-                        trtLlmRepoDir.toString(),
-                        "--tensor_parallel_degree",
-                        tpDegree,
-                        "--pipeline_parallel_degree",
-                        ppDegree,
-                        "--model_path",
-                        modelId);
-        boolean success = false;
-        try {
-            logger.info("Converting model to TensorRT-LLM artifacts: {}", (Object) cmd);
-            exec(cmd);
-            success = true;
-            logger.info("TensorRT-LLM artifacts built successfully");
-            return trtLlmRepoDir;
-        } catch (InterruptedException e) {
-            throw new IOException("Failed to build TensorRT-LLM artifacts", e);
-        } finally {
-            if (!success) {
-                Utils.deleteQuietly(trtLlmRepoDir);
-            }
-        }
-    }
-
-    static boolean isValidTrtLlmModelRepo(Path modelPath) throws IOException {
-        Path configFile = modelPath.resolve("config.json");
-        if (Files.exists(configFile) && Files.isRegularFile(configFile)) {
-            String config = Files.readString(configFile);
-            JsonObject json = JsonUtils.GSON.fromJson(config, JsonObject.class);
-            return json.has("build_config");
-        }
-        return false;
     }
 
     /**
